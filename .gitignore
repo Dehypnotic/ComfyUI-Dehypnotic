@@ -1,3 +1,27 @@
-/__pycache__
-*.pyc
-/nodes/__pycache__
+# Python-søppel og cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Kode-editorer (Hindrer at dine personlige vindusoppsett lastes opp)
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# JavaScript og Node (hvis du skulle finne på å bruke npm-pakker senere)
+node_modules/
+npm-debug.log*
+
+# Operativsystem-filer
+.DS_Store
+Thumbs.db
+
+# ComfyUI-spesifikt (hvis noden din genererer eller lagrer ting lokalt)
+/output/
+/input/
+/temp/
