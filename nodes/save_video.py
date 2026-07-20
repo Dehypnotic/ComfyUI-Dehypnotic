@@ -19,7 +19,6 @@ import uuid
 import tempfile
 import subprocess
 from pathlib import Path
-from datetime import datetime
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -680,7 +679,7 @@ class SaveVideo:
                 rel_parts = rel_parts[1:]
             rel_path = Path(*rel_parts) if rel_parts else Path()
             base_dir = base_output / rel_path
-        
+
         # Add subfolder
         if subfolder:
             base_dir = base_dir / Path(subfolder)
@@ -786,7 +785,7 @@ class SaveVideo:
                 proc.stderr.close() if proc.stderr else None
                 ret = proc.wait()
 
-            if tmp_wav: 
+            if tmp_wav:
                 try:
                     os.unlink(tmp_wav)
                 except Exception:
@@ -833,15 +832,15 @@ class SaveVideo:
                     target_folder = self._normalize_path(frames_path)
                 else:
                     target_folder = self._normalize_path(final_video_dir / frames_path)
-                
+
                 target_folder.mkdir(parents=True, exist_ok=True)
                 frames_saved_path = target_folder
 
                 if show_progress: print(f"[SaveVideo] Saving frames -> {target_folder} | select='{frames_select}' -> {len(idxs)} frames")
 
-                try: 
+                try:
                     import imageio.v2 as imageio
-                except Exception: 
+                except Exception:
                     imageio = None
 
                 if imageio:
@@ -850,20 +849,20 @@ class SaveVideo:
                         fname = f"{stem}_frame_{idx:04d}.png"
                         frame_path = target_folder / fname
                         self._validate_path_is_allowed(frame_path)
-                        try: 
+                        try:
                             imageio.imwrite(str(frame_path), a)
-                        except Exception: 
+                        except Exception:
                             pass
 
-        # --- UI Output --- 
+        # --- UI Output ---
         abs_path = video_path_str or (str(frames_saved_path.resolve()) if frames_saved_path else str(final_video_dir.resolve()))
         ui = {"text": abs_path}
-        
+
         ui_seq_images = []
         if show_preview:
-            try: 
+            try:
                 import imageio.v2 as imageio
-            except Exception: 
+            except Exception:
                 imageio = None
 
             if imageio and frames and preview_max_frames > 0:
@@ -885,7 +884,7 @@ class SaveVideo:
                         ui_seq_images.append({"filename": fname, "subfolder": "", "type": "temp"})
                     except Exception:
                         continue
-        
+
         if ui_seq_images:
             ui["images"] = ui_seq_images
 

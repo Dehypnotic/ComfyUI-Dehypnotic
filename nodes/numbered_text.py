@@ -10,7 +10,7 @@ def _parse_numbered_blocks(text: str) -> List[Tuple[bool, str]]:
     blocks = []
     current_block = []
     current_checked = False
-    
+
     for line in lines:
         # Match [x] or [ ] checkbox prefix
         match = re.match(r'^\[([xX ]?)\]\s*(.*)', line)
@@ -36,10 +36,10 @@ def _parse_numbered_blocks(text: str) -> List[Tuple[bool, str]]:
                     # If there is no block yet, start a checked block
                     current_block = [line]
                     current_checked = True
-                
+
     if current_block:
         blocks.append((current_checked, "\n".join(current_block)))
-        
+
     return blocks
 
 def _unescape(s: str) -> str:
@@ -57,9 +57,9 @@ def _get_joined_text(text: str, separator: str = "\n") -> str:
 
 class NumberedText:
     DESCRIPTION = (
-        "Pressing Enter creates a new text associated with the next number in the " 
+        "Pressing Enter creates a new text associated with the next number in the "
         "sequence. Use Shift + Enter to create a new line within the same text. "
-        "Only checkmarked texts will be sent to output during execution, separated " 
+        "Only checkmarked texts will be sent to output during execution, separated "
         "by the separator at the bottom right if several. The cursor may be moved "
         "up and down the sequence with the arrow keys. Swap the content of any two "
         "numbers at the bottom. If you still got the node with the deprecated ID, "

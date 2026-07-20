@@ -31,7 +31,7 @@ except Exception:  # pragma: no cover
     imageio_ffmpeg = None  # type: ignore
 
 
-# --------------------------- utils --------------------------- 
+# --------------------------- utils ---------------------------
 
 def _ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
@@ -204,7 +204,7 @@ def _normalize_audio_input(audio: _t.Any) -> _t.Tuple["np.ndarray", int]:
 
         B = shapes[b_axis]
         if B > 1:
-            print(f"[SaveAudioMP3] Advarsel: batch={{B}}, bruker batch[0].")
+            print("[SaveAudioMP3] Advarsel: batch={B}, bruker batch[0].")
         # Ta batch 0
         slicer = [slice(None)] * 3
         slicer[b_axis] = 0
@@ -218,7 +218,7 @@ def _normalize_audio_input(audio: _t.Any) -> _t.Tuple["np.ndarray", int]:
         if arr.ndim != 2:
             arr = np.squeeze(arr)
         if arr.ndim != 2:
-            raise ValueError(f"Kunne ikke redusere batch-array til 2D. shape={{arr.shape}}")
+            raise ValueError("Kunne ikke redusere batch-array til 2D. shape={arr.shape}")
 
         h, w = arr.shape
         if min(h, w) <= 8:
@@ -229,7 +229,7 @@ def _normalize_audio_input(audio: _t.Any) -> _t.Tuple["np.ndarray", int]:
                 arr = arr.T
 
     else:
-        raise ValueError(f"Audio-array må være 1D, 2D eller 3D (med batch). Fikk shape={{arr.shape}}")
+        raise ValueError("Audio-array må være 1D, 2D eller 3D (med batch). Fikk shape={arr.shape}")
 
     # Begrens til mono/stereo for MP3
     if arr.shape[1] > 2:
@@ -371,7 +371,7 @@ def _encode_mp3(pcm: "np.ndarray", sr: int, out_path: str,
     raise RuntimeError("Ingen MP3-backend funnet. Installer 'imageio-ffmpeg' eller 'lameenc'.")
 
 
-# --------------------------- ComfyUI node --------------------------- 
+# --------------------------- ComfyUI node ---------------------------
 
 class SaveAudioMP3:
     """
@@ -592,7 +592,7 @@ class SaveAudioMP3:
         file_path = self._expand_path_templates(file_path, context)
         subfolder = self._render_date_subfolder(date_subfolder_pattern, context)
         filename_prefix = self._expand_path_templates(filename_prefix, context)
-        
+
         # Combine file_path and subfolder
         if subfolder:
             file_path = os.path.join(file_path, subfolder)

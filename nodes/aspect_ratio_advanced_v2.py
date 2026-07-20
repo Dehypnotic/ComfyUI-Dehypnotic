@@ -15,15 +15,15 @@ DEFAULT_STATE = {
     "preset_calc_mode": "min",
     "preset_value": 1024,
     "snap": 16,
-    
+
     "preset_value_min": 1024,
     "preset_value_max": 1024,
     "preset_value_megapixels": 1.0,
-    
+
     "custom_preset_1": "16:9",
     "custom_preset_2": "3:2",
     "custom_preset_3": "1:1",
-    
+
     "custom_ratio_w": 4,
     "custom_ratio_h": 3,
     "custom_ratio_input_image": False,
@@ -35,15 +35,15 @@ DEFAULT_STATE = {
     "custom_ratio_value_min": 1024,
     "custom_ratio_value_max": 1024,
     "custom_ratio_value_megapixels": 1.0,
-    
+
     "custom_dimensions_width": 1024,
     "custom_dimensions_height": 1024,
     "custom_dimensions_input_image": False,
-    
+
     "scale_image_enabled": False,
     "scale_image_method": "auto",
     "vae_encode_enabled": False,
-    
+
     "width": 1024,
     "height": 1024
 }
@@ -51,7 +51,7 @@ DEFAULT_STATE = {
 class AspectRatioAdvancedV2:
     DESCRIPTION = (
     "In Presets, double-click the 3 smaller preset-buttons to set your own presets. Attach an "
-    "image to use it as a reference for custom ratio or 'dims' (short for dimensions). " 
+    "image to use it as a reference for custom ratio or 'dims' (short for dimensions). "
     "You can also VAE encode the image for use in I2I or similar workflows. Switch for it in Processing "
     "and another for image scaling. The snap value is the nearest multiple of the value to which "
     "the width and height will be rounded."
@@ -100,18 +100,18 @@ class AspectRatioAdvancedV2:
                     img_pil = Image.fromarray(img_np[:, :, 0], mode="L")
                 else:
                     img_pil = Image.fromarray(img_np, mode="RGB")
-                
+
                 img_resized = img_pil.resize((width, height), Image.Resampling.LANCZOS)
                 img_resized_np = np.array(img_resized).astype(np.float32) / 255.0
                 if C == 1:
                     img_resized_np = np.expand_dims(img_resized_np, axis=-1)
-                
+
                 img_resized_tensor = torch.from_numpy(img_resized_np).to(image.device)
                 scaled_imgs.append(img_resized_tensor)
             return torch.stack(scaled_imgs, dim=0)
         else:
             image_permuted = image.permute(0, 3, 1, 2)
-            
+
             mode_map = {
                 "nearest exact": "nearest-exact",
                 "nearest-exact": "nearest-exact",
@@ -120,12 +120,12 @@ class AspectRatioAdvancedV2:
                 "bicubic": "bicubic"
             }
             mode = mode_map.get(method_to_use, "bilinear")
-            
+
             if mode in ["bilinear", "bicubic"]:
                 scaled = F.interpolate(image_permuted, size=(height, width), mode=mode, align_corners=False)
             else:
                 scaled = F.interpolate(image_permuted, size=(height, width), mode=mode)
-                
+
             return scaled.permute(0, 2, 3, 1)
 
     def calculate_resolution(self, ResolutionState, unique_id=None, image=None, vae=None):
@@ -152,7 +152,7 @@ class AspectRatioAdvancedV2:
                 rh = float(ratio_parts[1])
             except Exception:
                 rw, rh = 1.0, 1.0
-            
+
             calc_mode = state.get("preset_calc_mode", "min")
             try:
                 val = float(state.get("preset_value", 1024))

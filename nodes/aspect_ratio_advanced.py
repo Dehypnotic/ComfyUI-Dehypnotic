@@ -8,15 +8,15 @@ class AspectRatioAdvanced:
     - aspect_ratio: Which ratio to use
     - scaling_mode: How to scale it (including custom dimensions)
     """
-    
+
     def __init__(self):
         pass
-    
+
     @classmethod
     def INPUT_TYPES(cls):
         # Aspect ratios without "custom" — only pure aspect ratios
         aspect_ratios = [
-            "1:1 square", 
+            "1:1 square",
             "4:3 standard",
             "3:2 classic",
             "16:9 widescreen",
@@ -28,13 +28,13 @@ class AspectRatioAdvanced:
             "4:5 social",
             "5:7 print"
         ]
-        
+
         # Scaling modes include "custom dimensions"
         scaling_modes = [
             "custom dimensions",
             "input dimensions",
-            "target megapixels", 
-            "min side", 
+            "target megapixels",
+            "min side",
             "max side"
         ]
 
@@ -45,7 +45,7 @@ class AspectRatioAdvanced:
             "bicubic",
             "lanczos"
         ]
-        
+
         return {
             "required": {
                 "scaling_mode": (scaling_modes,),
@@ -64,17 +64,17 @@ class AspectRatioAdvanced:
                 "image": ("IMAGE",),
             }
         }
-    
+
     RETURN_TYPES = ("INT", "INT", "INT", "LATENT", "IMAGE", "STRING")
     RETURN_NAMES = ("width", "height", "batch_count", "empty_latent", "scaled_image", "resolution_info")
     FUNCTION = "calculate_resolution"
     CATEGORY = "CustomNodes/Resolution"
-    
+
     def calculate_resolution(self, custom_width, custom_height, use_aspect_ratio, scaling_mode, use_input_image_ratio, target_megapixels, min_side, max_side, scaling_method, flip_dimensions, batch_count, image=None):
-        
+
         ratio_map = {
             "1:1 square": (1, 1),
-            "4:3 standard": (4, 3), 
+            "4:3 standard": (4, 3),
             "3:2 classic": (3, 2),
             "16:9 widescreen": (16, 9),
             "21:9 ultrawide": (21, 9),
@@ -85,7 +85,7 @@ class AspectRatioAdvanced:
             "4:5 social": (4, 5),
             "5:7 print": (5, 7)
         }
-        
+
         def make_divisible_by_8(value):
             return max(64, (value // 8) * 8)
 
@@ -101,13 +101,13 @@ class AspectRatioAdvanced:
         interpolation_mode = scaling_method
         if interpolation_mode == 'lanczos':
             interpolation_mode = 'bicubic'
-        
+
         # Image ratio has priority when the toggle is on
         if image is not None and use_input_image_ratio == "Yes":
             img_height = image.shape[1]
             img_width = image.shape[2]
             image_ratio = img_width / img_height
-            
+
             if scaling_mode == "target megapixels":
                 total_pixels = target_megapixels * 1_000_000
                 k = math.sqrt(total_pixels / (img_width * img_height))
@@ -133,15 +133,15 @@ class AspectRatioAdvanced:
             else:  # custom dimensions
                 width = custom_width
                 height = custom_height
-            
+
             width = make_divisible_by_8(width)
             height = make_divisible_by_8(height)
-            
+
             # Scale image
             image_permuted = image.permute(0, 3, 1, 2)
             scaled_image_permuted = _scale_image(image_permuted, height, width, interpolation_mode)
             scaled_image = scaled_image_permuted.permute(0, 2, 3, 1)
-        
+
         # Use exact input image dimensions
         elif scaling_mode == "input dimensions":
             if image is not None:
@@ -160,16 +160,16 @@ class AspectRatioAdvanced:
         elif scaling_mode == "custom dimensions":
             width = make_divisible_by_8(custom_width)
             height = make_divisible_by_8(custom_height)
-            
+
             # Scale image to custom dimensions if provided
             if image is not None:
                 image_permuted = image.permute(0, 3, 1, 2)
                 scaled_image_permuted = _scale_image(image_permuted, height, width, interpolation_mode)
                 scaled_image = scaled_image_permuted.permute(0, 2, 3, 1)
-        
+
         elif use_aspect_ratio in ratio_map:
             ratio_w, ratio_h = ratio_map[use_aspect_ratio]
-            
+
             if scaling_mode == "target megapixels":
                 total_pixels = target_megapixels * 1_000_000
                 k = math.sqrt(total_pixels / (ratio_w * ratio_h))
@@ -185,16 +185,16 @@ class AspectRatioAdvanced:
                 scaling_factor = max_side / longer_ratio
                 width = int(ratio_w * scaling_factor)
                 height = int(ratio_h * scaling_factor)
-            
+
             width = make_divisible_by_8(width)
             height = make_divisible_by_8(height)
-            
+
             # Scale image to preset ratio if provided
             if image is not None:
                 image_permuted = image.permute(0, 3, 1, 2)
                 scaled_image_permuted = _scale_image(image_permuted, height, width, interpolation_mode)
                 scaled_image = scaled_image_permuted.permute(0, 2, 3, 1)
-        
+
         # Flip if requested
         if flip_dimensions == "Yes":
             width, height = height, width
@@ -202,7 +202,7 @@ class AspectRatioAdvanced:
                 scaled_image_permuted = scaled_image.permute(0, 3, 1, 2)
                 scaled_image_permuted = _scale_image(scaled_image_permuted, height, width, interpolation_mode)
                 scaled_image = scaled_image_permuted.permute(0, 2, 3, 1)
-        
+
         # Fallback: return original image if no scaled image was produced
         if scaled_image is None and image is not None:
             scaled_image = image
@@ -211,12 +211,12 @@ class AspectRatioAdvanced:
         latent_width = width // 8
         latent_height = height // 8
         latent = torch.zeros([batch_count, 4, latent_height, latent_width])
-        
+
         # Info
         actual_mp = (width * height) / 1_000_000
         actual_min = min(width, height)
         actual_max = max(width, height)
-        
+
         if scaling_mode == "input dimensions":
             source_info = "input dimensions"
         elif image is not None and use_input_image_ratio == "Yes":
@@ -225,9 +225,9 @@ class AspectRatioAdvanced:
             source_info = "custom dimensions"
         else:
             source_info = f"{use_aspect_ratio} + {scaling_mode}"
-        
+
         resolution_info = f"{width}x{height} ({actual_mp:.2f}MP, {width/height:.2f}:1, {source_info})"
-        
+
         return (width, height, batch_count, {"samples": latent}, scaled_image, resolution_info)
 
 # Node mapping
