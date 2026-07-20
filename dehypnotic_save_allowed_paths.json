@@ -1,0 +1,12 @@
+# Whitelist for Dehypnotic's Save nodes (Image and Audio)
+# Add absolute root folders where saving is allowed outside ComfyUI/output.
+# Lines starting with '#' are treated as comments.
+# In addition to the node folder, you can place this file globally under your ComfyUI root:
+# <ComfyUI>/save_mp3_allowed_paths.json
+# <ComfyUI>/config/save_mp3_allowed_paths.json
+# <ComfyUI>/user/save_mp3_allowed_paths.json
+# <ComfyUI>/user/config/save_mp3_allowed_paths.json
+# The node folder may be overwritten by future updates.
+# Example:
+# { "allowed_roots": ["D:/ImageExports", "E:/TeamShare/Assets"] }
+{ "allowed_roots": [] }
