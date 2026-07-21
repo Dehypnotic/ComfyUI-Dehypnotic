@@ -14,6 +14,7 @@ A suite of feature-rich, high-performance custom nodes for [ComfyUI](https://git
   - [🧘 Save MP3 (Dehypnotic)](#-save-mp3-dehypnotic)
   - [🧘 Save Images (Dehypnotic)](#-save-images-dehypnotic)
   - [🧘 Save Video & Frames (Dehypnotic)](#-save-video--frames-dehypnotic)
+- [Security and External Save Paths](#security-and-external-save-paths-comfyui-manager-compliant)
 - [Installation](#installation)
 - [License](#license)
 
