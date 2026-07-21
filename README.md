@@ -1,267 +1,219 @@
-# 🧘 ComfyUI-Dehypnotic Node Pack
+# ComfyUI-Dehypnotic Custom Nodes
 
-En samling avanserte, fleksible og produksjonsklare custom nodes for **ComfyUI**. Pakken inneholder verktøy for trådløs kabling, avansert bildeforholds- og oppløsningsberegning, interaktiv tekstbehandling samt kraftige lagringsnoder for bilder, video og lyd.
-
----
-
-## 📋 Oversikt over nodene
-
-| Node Display Name | Kategori | Beskrivelse |
-| :--- | :--- | :--- |
-| **🧘 AspectRatio (Dehypnotic)** (`AspectRatioAdvancedV2`) | `Dehypnotic/📐 Aspect Ratio` | Beregn ideelle bildedimensjoner, skaler bilder og utfør VAE-encoding direkte. |
-| **🧘 RangeToString (Dehypnotic)** (`RangeToString`) | `Dehypnotic/📝 Text Utils` | Generer en tallsekvens/tallrekke som en formatert tekststreng. |
-| **🧘 Set Dehypnotic** (`DehypnoticSetNode`) | `Dehypnotic/🔀 Wireless Links` | Lagre hvilken som helst variabel eller datastrøm trådløst under et gitt navn. |
-| **🧘 Get Dehypnotic** (`DehypnoticGetNode`) | `Dehypnotic/🔀 Wireless Links` | Hent ut igjen trådløse data fra en `Set Dehypnotic`-node hvor som helst i workflowen. |
-| **🧘 Save MP3 (Dehypnotic)** (`SaveAudioMP3`) | `Dehypnotic/💾 IO` | Lagre lydspor til disk i MP3-format med VBR/CBR/ABR-støtte og variabel-maler. |
-| **🧘 Save Images (Dehypnotic)** (`SaveImages`) | `Dehypnotic/💾 IO` | Ekporter bilder i PNG, JPG, WEBP, GIF, BMP, TIFF med workflow-embedding og sekvensering. |
-| **🧘 Save Video & Frames (Dehypnotic)** (`SaveVideo`) | `Dehypnotic/💾 IO` | Eksporter video og/eller bilderammer (H.264, HEVC, VP9, AV1, ProRes, DNxHR) med lyd. |
-| **🧘 NumberedText (Dehypnotic)** (`NumberedText`) | `Dehypnotic/📝 Text Utils` | Interaktiv, nummerert tekstbehandler med avmerkingsbokser for selektiv prompt-sammenslåing. |
+A suite of feature-rich, high-performance custom nodes for [ComfyUI](https://github.com/comfyanonymous/ComfyUI). This repository provides enhanced nodes for image, video, audio saving, dynamic aspect ratio calculation, wireless data rerouting, and text generation.
 
 ---
 
-## 📐 AspectRatioAdvancedV2 (`🧘 AspectRatio (Dehypnotic)`)
+## Table of Contents
 
-**Kategori:** `Dehypnotic/📐 Aspect Ratio`
-
-En alt-i-én oppløsningsberegner og bildebehandler for ComfyUI. Noden gjør det enkelt å velge bildeforhold (aspect ratio) eller dimensjoner, avrunde til nærmeste mod-størrelse (snap), samt automatisk skalere og VAE-encode bilder til latent-rommet.
-
-### 🌟 Hovedfunksjoner
-* **Tre beregningsmoduser:**
-  * **Presets:** Velg fra forhåndsdefinerte bildeforhold (1:1, 16:9, 3:2, 4:3, etc.). Noden har 3 tilpassbare hurtigknapper (**dobbelklikk** på dem i grensesnittet for å lagre dine egne favorittforhold).
-  * **Custom Ratio:** Angi eget brøkforhold (f.eks. 21:9) eller hent bildeforholdet direkte fra et innkommende referansebilde.
-  * **Custom Dimensions:** Angi spesifikk bredde og høyde manuelt, eller hent de eksakte dimensjonene direkte fra et innkommende bilde.
-* **Beregningstyper (`calc_mode`):**
-  * `min`: Setter minste side til den angitte target-oppløsningen.
-  * `max`: Setter største side til den angitte target-oppløsningen.
-  * `megapixels`: Beregner bredde og høyde slik at det samlede pikselantallet matcher målet i megapiksler (f.eks. 1.0 MP).
-* **Snap / Grid-justering:** Runder av bredde og høyde til nærmeste multiplum av `8`, `16`, `32` eller `64` piksler (viktig for SD1.5, SDXL, FLUX osv.).
-* **Integrert bildeskalering:** Kan automatisk skalere et innkommende bilde til den beregnede oppløsningen med valgfri metode (`auto`, `lanczos`, `bicubic`, `bilinear`, `nearest exact`, `area`). `auto` velger automatisk Lanczos ved nedskalering for maksimal skarphet, og Bicubic ved oppskalering.
-* **Integrert VAE Encoding:** Kan VAE-encode det skalerte bildet direkte, ideelt for Image-to-Image (I2I) og inpainting workflows.
-
-### 📥 Inputs
-* **Innganger (Valgfrie):**
-  * `image` (`IMAGE`): Valgfritt bilde som brukes som oppløsnings-referanse og/eller som kilde for bildeskalering/encoding.
-  * `vae` (`VAE`): Valgfri VAE-modell for direkte latent-encoding.
-
-### 📤 Outputs
-* `width` (`INT`): Den beregnede og avrundede bredden i piksler.
-* `height` (`INT`): Den beregnede og avrundede høyden i piksler.
-* `latent` (`LATENT`): Tom latent (hvis intet bilde/VAE er kablet inn) eller VAE-kodet latent fra det skalerte bildet.
-* `scaled_image` (`IMAGE`): Det skalerte (eller originale) bildet.
+- [Nodes Overview](#nodes-overview)
+  - [🧘 AspectRatio (Dehypnotic)](#-aspectratio-dehypnotic)
+  - [🧘 Set Dehypnotic & Get Dehypnotic](#-set-dehypnotic--get-dehypnotic)
+  - [🧘 NumberedText (Dehypnotic)](#-numberedtext-dehypnotic)
+  - [🧘 RangeToString (Dehypnotic)](#-rangetostring-dehypnotic)
+  - [🧘 Save MP3 (Dehypnotic)](#-save-mp3-dehypnotic)
+  - [🧘 Save Images (Dehypnotic)](#-save-images-dehypnotic)
+  - [🧘 Save Video & Frames (Dehypnotic)](#-save-video--frames-dehypnotic)
+- [Installation](#installation)
+- [License](#license)
 
 ---
 
-## 📝 RangeToString (`🧘 RangeToString (Dehypnotic)`)
+## Nodes Overview
 
-**Kategori:** `Dehypnotic/📝 Text Utils`
+### 🧘 AspectRatio (Dehypnotic)
+**Class Name**: `AspectRatioAdvancedV2` / `dehypnotic_AspectRatio`  
+**Category**: `Dehypnotic/📐 Aspect Ratio`
 
-Genererer en sekvens av tall formatert som en enkelt tekststreng (STRING). Nyttig for å lage lister, indeks-strenger eller parametere for animasjoner og looper.
+A flexible aspect ratio and resolution generator node with interactive frontend controls, visual aspect ratio presets, image reference scaling, grid snapping, and VAE encoding support.
 
-### 🌟 Hovedfunksjoner
-* Støtter både økende (`step > 0`) og minkende (`step < 0`) sekvenser.
-* Valgfri inkludering av sluttverdi via `inclusive` eller `exclusive` modus.
-* Valgfritt skilletegn / separator (komma, linjeskift `\n`, mellomrom, etc.).
+#### Key Features:
+- **Preset & Custom Ratio Modes**: Choose standard presets (1:1, 16:9, 4:3, etc.) or set custom width/height ratios and dimensions.
+- **Reference Image Scaling**: Connect an optional input `IMAGE` to scale it to the calculated aspect ratio/dimensions using Lanczos, Bicubic, Bilinear, Area, or Nearest Exact interpolation.
+- **Grid Snapping**: Automatically rounds dimensions to the nearest multiple of 8, 16, 32, or 64 (ideal for diffusion models like SD1.5, SDXL, FLUX, etc.).
+- **Optional VAE Encoding**: Connect a `VAE` model to directly encode the scaled image into a `LATENT` representation.
 
-### 📥 Inputs
-* `start` (`INT`, standard: `0`): Startverdi for sekvensen.
-* `end` (`INT`, standard: `3`): Sluttverdi for sekvensen.
-* `step` (`INT`, standard: `1`): Steglengde (kan være negativ).
-* `separator` (`STRING`, standard: `,`): Skilletegn mellom tallene.
-* `mode` (`"inclusive"` / `"exclusive"`): Om `end`-verdien skal inkluderes dersom den treffes av steget.
-
-### 📤 Outputs
-* `STRING`: Den genererte tallsekvensen satt sammen med skilletegnet (f.eks. `"0,1,2,3"`).
-
----
-
-## 🔀 Set Dehypnotic & Get Dehypnotic (`🧘 Set Dehypnotic` / `🧘 Get Dehypnotic`)
-
-**Kategori:** `Dehypnotic/🔀 Wireless Links`
-
-Trådløse koblingsnoder (Wireless Nodes) som lar deg sende hvilken som helst datatype overalt i workflowen din uten å trekke lange, rotete ledninger ("spaghetti").
-
-### 🌟 Hovedfunksjoner
-* **Universelle datatyper (`ANY`):** Støtter kobling av bilder (`IMAGE`), latenter (`LATENT`), modeller (`MODEL`), VAE, CLIP, tekst (`STRING`), tall (`INT`/`FLOAT`) og tilpassede datatyper.
-* **Passthrough på Set:** `Set Dehypnotic`-noden har også en direkte utgang (`*`) slik at du kan koble den videre lokalt samtidig som den er tilgjengelig trådløst.
-* **Frontend Virtual Execution:** Kjører som virtuelle noder i ComfyUI sitt grensesnitt uten å legge til forsinkelse eller ekstra steg under selve kjøringen.
-
-### 💡 Bruk
-1. Plasser en **Set Dehypnotic**-node der du har et signal du vil gjenbruke.
-2. Koble signalet til `value`-inngangen, og gi variabelen et lettgjenkjennelig navn i `name`-feltet.
-3. Plasser en **Get Dehypnotic**-node et annet sted i canvaset, og velg variabelnavnet fra rullgardinmenyen.
+#### Inputs & Outputs:
+| Type | Name | Data Type | Description |
+| :--- | :--- | :--- | :--- |
+| **Optional Input** | `image` | `IMAGE` | Reference image to measure ratio from or scale. |
+| **Optional Input** | `vae` | `VAE` | VAE model for direct latent encoding. |
+| **Output** | `width` | `INT` | Calculated width in pixels (snapped). |
+| **Output** | `height` | `INT` | Calculated height in pixels (snapped). |
+| **Output** | `latent` | `LATENT` | Encoded latent (if VAE input and encoding are enabled). |
+| **Output** | `scaled_image` | `IMAGE` | Resized reference image matching the target dimensions. |
 
 ---
 
-## 💾 SaveAudioMP3 (`🧘 Save MP3 (Dehypnotic)`)
+### 🧘 Set Dehypnotic & Get Dehypnotic
+**Class Name**: `DehypnoticSetNode`, `DehypnoticGetNode`  
+**Category**: `Dehypnotic/🔀 Wireless Links`
 
-**Kategori:** `Dehypnotic/💾 IO`
+Wireless routing nodes designed to keep your ComfyUI node graphs organized, readable, and free of crossing connection wires ("spaghetti cables").
 
-Ekstraherer og lagrer lydspor fra ComfyUI til disk i komprimert MP3-format med høy kvalitet og full fleksibilitet.
+#### Key Features:
+- **Universal Data Support**: Works with any ComfyUI data type (`IMAGE`, `LATENT`, `MODEL`, `CLIP`, `CONDITIONING`, `INT`, `FLOAT`, `STRING`, custom types, etc.).
+- **Virtual Node Architecture**: Operates on the frontend with zero backend execution overhead. ComfyUI automatically resolves connections directly from the source during graph execution.
+- **Passthrough Output**: `Set Dehypnotic` outputs the connected value so you can chain nodes without extra splits.
 
-### 🌟 Hovedfunksjoner
-* **Automatisk format-håndtering:** Håndterer mono og stereo, varierte sample rates (SR) og batch-dimensjoner automatisk.
-* **Encoding-backends:** Benytter FFmpeg (automatisk nedlastet/bundlet via `imageio-ffmpeg` eller systemets FFmpeg) med fallback til `lameenc`.
-* **Bitrate-moduser:**
-  * `variable` (VBR): Dynamisk bitrate basert på kvalitet (`high` ~245 kbps V0, `medium` ~165 kbps V4, `low` ~100 kbps V7).
-  * `constant` (CBR): Fast bitrate (`high` 320 kbps, `medium` 192 kbps, `low` 128 kbps).
-  * `average` (ABR): Gjennomsnittlig bitrate (`high` 256 kbps, `medium` 192 kbps, `low` 160 kbps).
-* **Dynamiske banemaler:** Støtter variabler som `[date]`, `[datetime]`, `[unix]`, `[guid]`, `[model]` og `[time(%Y-%m-%d)]` i stier og filnavn.
-* **Sikkerhetskontroll:** Støtter whitelisting for lagring utenfor ComfyUI sin standard output-mappe.
-
-### 📥 Inputs
-* `audio` (`AUDIO`): Lydsignalet fra en lydgenererende node.
-* `file_path` (`STRING`, standard: `"audio"`): Mappe hvor lydfilen skal lagres.
-* `date_subfolder_pattern` (`STRING`, standard: `"%Y-%m-%d"`): Mønster for undermapper basert på dato/tid.
-* `filename_prefix` (`STRING`, standard: `"ComfyUI"`): Filnavn-prefix.
-* `bitrate_mode` (`"variable"` / `"constant"` / `"average"`): Modus for MP3-bitrate.
-* `quality` (`"high"` / `"medium"` / `"low"`): Kvalitetsnivå.
-
-### 📤 Outputs
-* `audio` (`AUDIO`): Passthrough av lydsignalet.
-* `bitrate_info` (`STRING`): Tekstlig oppsummering av valgte bitrate-innstillinger.
+#### How to Use:
+1. Attach any output to a `Set Dehypnotic` node and enter a variable name.
+2. Place a `Get Dehypnotic` node anywhere in your graph, select the variable name from the dropdown, and connect its output to your target node.
 
 ---
 
-## 💾 SaveImages (`🧘 Save Images (Dehypnotic)`)
+### 🧘 NumberedText (Dehypnotic)
+**Class Name**: `NumberedText` / `dehypnotic_NumberedText`  
+**Category**: `Dehypnotic/📝 Text Utils`
 
-**Kategori:** `Dehypnotic/💾 IO`
+A prompt management and text block organizer node. Allows writing multi-line text entries with interactive checkbox toggles to selectively combine prompts.
 
-En avansert bilde-eksportør med støtte for mange bildeformater, sekvensiell navngivning, bildeoptimalisering og innbygging av workflow-metadata.
+#### Key Features:
+- **Interactive Numbered Blocks**: Create new numbered entries using `Enter`. Create multi-line sub-texts within the same item using `Shift + Enter`.
+- **Selective Output**: Toggle checkboxes (`[x]` / `[ ]`) next to numbered items. Only checked text items are combined and output.
+- **Custom Delimiters**: Joins active text blocks using any custom separator (e.g., `, `, `\n`, ` | `).
+- **Line Swapping**: Quick UI shortcuts to swap the content of any two numbered items.
 
-### 🌟 Hovedfunksjoner
-* **Støttede bildeformater:** PNG, JPG/JPEG, WEBP, GIF, BMP, TIFF.
-* **Automatisk sekvensiering:** Teller opp filnavn fortløpende (`prefix_0001.png`, `prefix_0002.png`) med tilpassbar sifferlengde (`number_padding`) og skilletegn (`filename_delimiter`).
-* **Kvalitetsstyring:**
-  * Justerbar kvalitet (`quality` 1–100) for JPG/WEBP.
-  * Tapfri WEBP-støtte (`lossless_webp`).
-  * Bildeoptimalisering via Pillow (`optimize_image`).
-  * DPI-angivelse (standard 300 DPI).
-* **Workflow Embedding:** Inkluderer hele ComfyUI-workflowen direkte i bildets metadata (tEXt/iTXt for PNG, XMP for WEBP), slik at bilder kan dras rett inn i ComfyUI igjen senere.
-* **Dynamiske banemaler:** Full støtte for plassholdere som `[date]`, `[datetime]`, `[unix]`, `[guid]`, `[model]` og `[env(NAVN)]`.
-
-### 📥 Inputs
-* `images` (`IMAGE`): Bilde(r) eller bildeserie.
-* `file_path` (`STRING`): Relativ eller absolutt sti.
-* `date_subfolder_pattern` (`STRING`): Mønster for dato-undermappe.
-* `filename_prefix` (`STRING`, standard: `"QIE"`): Prefiks for filnavn.
-* `filename_delimiter` (`STRING`, standard: `"_"`): Skilletegn før nummerering.
-* `number_padding` (`INT`, standard: `4`): Antall siffer i sekvensnummer (f.eks. `0001`).
-* `number_start` (`INT`, standard: `1`): Startnummer for sekvensen.
-* `extension` (`png`, `jpg`, `webp`, `gif`, `bmp`, `tiff`): Filformat.
-* `quality` (`INT`, standard: `100`): Komprimeringskvalitet.
-* `optimize_image` (`BOOLEAN`, standard: `True`): Optimaliser filstørrelse.
-* `lossless_webp` (`BOOLEAN`, standard: `True`): Lossless WEBP.
-* `dpi` (`INT`, standard: `300`): Oppløsning i DPI.
-* `embed_workflow` (`BOOLEAN`, standard: `False`): Lagre ComfyUI-workflow i filens metadata.
-
-### 📤 Outputs
-* `images` (`IMAGE`): Passthrough av bildene.
-* `saved_path` (`STRING`): Linjedelt streng med absolutte filbaner til alle lagrede bilder.
+#### Inputs & Outputs:
+| Type | Name | Data Type | Description |
+| :--- | :--- | :--- | :--- |
+| **Required Input** | `text` | `STRING` (Multiline) | Multi-line structured text containing numbered/checked entries. |
+| **Required Input** | `separator` | `STRING` | Delimiter string used to join active blocks (supports `\n`, `\t`). |
+| **Output** | `text` | `STRING` | Combined text of all active (checked) items. |
 
 ---
 
-## 💾 SaveVideo (`🧘 Save Video & Frames (Dehypnotic)`)
+### 🧘 RangeToString (Dehypnotic)
+**Class Name**: `RangeToString` / `dehypnotic_RangeToString`  
+**Category**: `Dehypnotic/📝 Text Utils`
 
-**Kategori:** `Dehypnotic/💾 IO`
+Generates a formatted string representing a numerical sequence. Useful for batching, prompt scheduling, frame indices, or automated parameter sweeps.
 
-En alt-i-ett ekspertnode for lagring av video og/eller enkeltenkeltrammer direkte fra ComfyUI bildestrømmer, med sømløs lydmiks og høy encoderytelse.
+#### Key Features:
+- Supports forward and reverse numerical ranges (positive or negative steps).
+- Configurable range boundary rules (`inclusive` or `exclusive`).
+- Customizable delimiter string.
 
-### 🌟 Hovedfunksjoner
-* **Tre lagringsmoduser:** `video`, `frames`, eller `video & frames`.
-* **Konteinere & Kodeker:**
-  * **MP4:** H.264 (`libx264`), H.265 (`libx265`), AV1 (`libaom-av1`).
-  * **MKV:** Alle kodeker inkludert VP9, ProRes og DNxHR.
-  * **WebM:** VP9 (`libvpx-vp9`), AV1 (`libaom-av1`).
-  * **QuickTime MOV:** H.264, H.265, ProRes 422 HQ (`prores_ks`), DNxHR HQ (`dnxhr_hq`).
-* **Videokvalitet og Speed (CRF & Presets):**
-  * `crf` (Constant Rate Factor): Lav verdi = høyere kvalitet / større fil (typisk 18–28 for H.264).
-  * `preset`: Encoder-hastighet (`ultrafast` til `veryslow`).
-* **Lydintegrasjon (`audio`) & Loop Still to Audio:**
-  * Koble et valgt lydspor direkte til noden.
-  * Dersom du sender inn **1 enkeltbilde** sammen med et lydspor og `loop_still_to_audio` er aktivert, vil bildet automatisk forlenges/loopes til å matche hele lydsporets varighet!
-* **Uttrekk av valgte bilderammer (`frames_select`):**
-  * Lagre spesifikke rammer fra en video til en egen undermappe (`frames_dir`).
-  * Mønstre: `-2` (siste bilde), `-1` (alle bilder), `0` (første bilde), eller komma-separert liste som `0,5,10`.
-
-### 📥 Inputs
-* `save_mode` (`"video"`, `"frames"`, `"video & frames"`): Hva som skal eksporteres.
-* `images` (`IMAGE`): Bildesekvens eller enkeltbilde.
-* `file_path` (`STRING`, standard: `"output/video"`): Mappe for videolagring.
-* `container` (`mp4`, `mkv`, `webm`, `mov`): Formatkontainer.
-* `video_codec` (`h264`, `h265`, `vp9`, `av1`, `prores`, `dnxhr`): Video-kodek.
-* `fps` (`INT`, standard: `24`): Bildesekvenshastighet (Frames Per Second).
-* `crf` (`INT`, standard: `23`): Kvalitetsfaktor.
-* `preset` (`ultrafast` ... `veryslow`): Ytelsesprofil.
-* `audio` (`AUDIO`, valgfritt): Lydspor som skal mikses inn.
-* `loop_still_to_audio` (`BOOLEAN`, standard: `True`): Loop enkeltbilde til lydsporets lengde.
-* `frames_dir` (`STRING`): Undermappe for eksport av enkeltrammer.
-* `frames_select` (`STRING`, standard: `"-2"`): Hvilke rammer som skal eksporteres.
-
-### 📤 Outputs
-* `images` (`IMAGE`): Passthrough av bildene.
-* `video_path` (`STRING`): Den absolutte filstien til den ferdig renderte videofilen.
+#### Inputs & Outputs:
+| Type | Name | Options / Type | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Required Input** | `start` | `INT` | `0` | Starting integer value. |
+| **Required Input** | `end` | `INT` | `3` | Ending integer boundary. |
+| **Required Input** | `step` | `INT` | `1` | Increment/decrement step (cannot be 0). |
+| **Required Input** | `separator` | `STRING` | `,` | Delimiter string inserted between numbers. |
+| **Required Input** | `mode` | `["inclusive", "exclusive"]` | `inclusive` | Whether to include the `end` value in output. |
+| **Output** | `STRING` | `STRING` | - | Generated sequence string (e.g. `"0,1,2,3"`). |
 
 ---
 
-## 📝 NumberedText (`🧘 NumberedText (Dehypnotic)`)
+### 🧘 Save MP3 (Dehypnotic)
+**Class Name**: `SaveAudioMP3Dehypnotic`  
+**Category**: `Dehypnotic/💾 IO`
 
-**Kategori:** `Dehypnotic/📝 Text Utils`
+A specialized audio output node for encoding audio inputs directly to MP3 format with flexible bitrate controls and path templating.
 
-En interaktiv tekst-redigerer som lar deg organisere og selektivt aktivere/deaktivere avsnitt og prompt-deler ved hjelp av nummererte blokker og avmerkingsbokser.
+#### Key Features:
+- **Audio Format Auto-Normalization**: Handles mono/stereo inputs, arbitrary sample rates, numpy arrays, and PyTorch audio tensors seamlessy.
+- **Encoder Fallbacks**: Uses `imageio-ffmpeg` or system FFmpeg binary, with automatic fallback to `lameenc`.
+- **Bitrate Modes & Quality Levels**: Supports `variable` (VBR), `constant` (CBR), and `average` (ABR) encoding across `low`, `medium`, and `high` quality presets.
+- **Dynamic Path Expansion**: Supports date placeholders (`%Y-%m-%d`), timestamp variables, environment variables, and unique IDs in output paths.
 
-### 🌟 Hovedfunksjoner
-* **Smart tekst-oppdeling:**
-  * Trykk **Enter** for å lage et nytt nummerert tekstpunkt (f.eks. `[x] 1. Første prompt`).
-  * Trykk **Shift + Enter** for å sette inn linjeskift *innenfor* det samme nummererte punktet.
-* **Selektiv aktivering (`[x]` og `[ ]`):**
-  * Kun avmerkede punkter (`[x]`) blir inkludert i den endelige teksten når workflowen kjøres.
-  * Punkter uten hake (`[ ]`) deaktiveres og ignoreres.
-* **Fleksibel separator:** Slår sammen de valgte tekstblokkene med valgt separator (f.eks. `, `, `\n`, ` AND `).
-* **Interaktive kontrollere:** Støtte for piltastnavigasjon og ombytting (swap) av tekstblokker direkte i grensesnittet.
-
-### 📥 Inputs
-* `text` (`STRING`, multiline): Tekstområde med nummererte avsnitt.
-* `separator` (`STRING`, standard: `", "`): Skilletegn som settes inn mellom de aktive tekstblokkene (støtter spesielle tegn som `\n` og `\t`).
-
-### 📤 Outputs
-* `text` (`STRING`): Den sammenslåtte strengen bestående av alle aktive (`[x]`) tekstblokker.
-
----
-
-## 🛠️ Ekstra funksjoner og sikkerhet
-
-### 📁 Dynamiske plassholdere i filstier (Path Placeholders)
-I nodene **SaveAudioMP3**, **SaveImages** og **SaveVideo** kan du bruke følgende variabler direkte i `file_path`, `date_subfolder_pattern` og `filename_prefix`:
-
-* `[date]`: Dagens dato (`YYYY-MM-DD`).
-* `[datetime]`: Dato og tid (`YYYY-MM-DD_HH-MM-SS`).
-* `[time(%Y-%m)]`: Formaterer tidspunkt etter standard strftime-koder.
-* `[unix]`: Unix timestamp (sekunder).
-* `[guid]` / `[uuid]`: Unik random UUID4-streng.
-* `[model]`: Navnet på detektert modell/checkpoint (hvis tilgjengelig).
-* `[env(NAVN)]`: Henter verdi fra miljøvariabelen `NAVN`.
-
-### 🔒 Whitelisting av eksterne lagringsbaner
-Av sikkerhetshensyn tillater lagringsnodene i utgangspunktet kun skriving til ComfyUI sin `output`-mappe. Dersom du ønsker å lagre filer til andre disker eller nettverksdelinger, oppretter du filen `dehypnotic_save_allowed_paths.json` i rotmappen til ComfyUI (eller i `user/config/`):
-
-```json
-{
-  "allowed_roots": [
-    "D:/BilderOgVideo",
-    "E:/Prosjekter/AudioExports"
-  ]
-}
-```
-
-Du kan også sette miljøvariabelen `DEHYPNOTIC_SAVE_ALLOWED_PATHS` til å peke på denne JSON-filen.
+#### Inputs & Outputs:
+| Type | Name | Data Type | Description |
+| :--- | :--- | :--- | :--- |
+| **Required Input** | `audio` | `AUDIO` | Audio input stream or dictionary structure. |
+| **Required Input** | `file_path` | `STRING` | Output directory path. |
+| **Required Input** | `date_subfolder_pattern` | `STRING` | Strftime pattern for subfolders (e.g., `%Y-%m-%d`). |
+| **Required Input** | `filename_prefix` | `STRING` | Filename prefix (e.g., `ComfyUI`). |
+| **Required Input** | `bitrate_mode` | `["variable", "constant", "average"]` | MP3 encoding strategy. |
+| **Required Input** | `quality` | `["low", "medium", "high"]` | Audio quality / target bitrate setting. |
+| **Output** | `audio` | `AUDIO` | Passthrough of input audio data. |
+| **Output** | `bitrate_info` | `STRING` | Detailed summary of encoding parameters used. |
 
 ---
 
-## ⚙️ Krav og installasjon
+### 🧘 Save Images (Dehypnotic)
+**Class Name**: `SaveImagesDehypnotic`  
+**Category**: `Dehypnotic/💾 IO`
 
-1. Klon eller kopier dette repositoriet inn i mappen `ComfyUI/custom_nodes/ComfyUI-Dehypnotic`.
-2. Installer eventuelle avhengigheter dersom du skal bruke video- og lydfunksjonalitet:
+An advanced multi-format image saving node featuring sequence numbering, date-based folder grouping, image optimization, and workflow metadata embedding.
+
+#### Key Features:
+- **Multi-Format Export**: Supports PNG, JPG/JPEG, WEBP, GIF, BMP, and TIFF formats.
+- **Workflow Metadata Embedding**: Embeds full ComfyUI workflow metadata into PNG (via `tEXt` chunks) and WebP images (via XMP metadata).
+- **Sequential File Naming**: Automatic file index incrementing with customizable zero-padding (e.g. `0001`, `0002`) and prefix/delimiter settings.
+- **Quality & Compression Controls**: Configurable image quality percentage, WEBP lossless encoding option, PNG/JPG image optimization, and custom DPI metadata.
+
+#### Inputs & Outputs:
+| Type | Name | Default | Description |
+| :--- | :--- | :--- | :--- |
+| **Required Input** | `images` | - | Input image batch (`IMAGE`). |
+| **Required Input** | `file_path` | `""` | Destination folder path (relative or absolute). |
+| **Required Input** | `date_subfolder_pattern` | `%Y-%m-%d` | Strftime pattern for dated subfolders. |
+| **Required Input** | `filename_prefix` | `QIE` | Prefix for saved file names. |
+| **Required Input** | `filename_delimiter` | `_` | Separator between prefix and index number. |
+| **Required Input** | `number_padding` | `4` | Number of digits for index padding (1–10). |
+| **Required Input** | `number_start` | `1` | Initial sequence number. |
+| **Required Input** | `extension` | `png` | Image format (`png`, `jpg`, `webp`, `gif`, `bmp`, `tiff`). |
+| **Required Input** | `quality` | `100` | Output compression quality (1–100). |
+| **Required Input** | `optimize_image` | `True` | Enable image optimization pass. |
+| **Required Input** | `lossless_webp` | `True` | Enable lossless encoding for WebP images. |
+| **Required Input** | `dpi` | `300` | Set DPI resolution metadata. |
+| **Required Input** | `embed_workflow` | `False` | Embed ComfyUI workflow JSON into metadata. |
+| **Output** | `images` | `IMAGE` | Passthrough input images tensor. |
+| **Output** | `saved_path` | `STRING` | Line-separated paths of all saved files on disk. |
+
+---
+
+### 🧘 Save Video & Frames (Dehypnotic)
+**Class Name**: `SaveVideoDehypnotic`  
+**Category**: `Dehypnotic/💾 IO`
+
+A comprehensive video renderer and frame exporter node leveraging bundled `imageio-ffmpeg` for high quality video generation with optional audio multiplexing.
+
+#### Key Features:
+- **Multiple Containers & Professional Codecs**:
+  - Containers: `mp4`, `mkv`, `webm`, `mov`.
+  - Codecs: H.264 (`libx264`), H.265/HEVC (`libx265`), VP9 (`libvpx-vp9`), AV1 (`libaom-av1`), ProRes 422 HQ (`prores_ks`), DNxHR HQ (`dnxhr_hq`).
+- **Flexible Modes (`save_mode`)**: Choose to export `video`, individual `frames`, or `video & frames` simultaneously.
+- **Audio Integration & Single-Frame Looping**: Attach mono or stereo `AUDIO`. If a single image frame and an audio track are provided, the node automatically loops the frame for the full duration of the audio.
+- **Frame Extraction & Selection**: Extract specific frames (e.g. first frame `0`, last frame `-2`, all frames `-1`, or explicit lists like `0,5,10`) to a subfolder during video export.
+- **Quality & Performance Tuning**: CRF (Constant Rate Factor) quality control, encoder speed presets (`ultrafast` to `veryslow`), and optional frame preview rendering in the node output.
+
+#### Key Inputs & Outputs:
+| Type | Name | Default / Options | Description |
+| :--- | :--- | :--- | :--- |
+| **Required Input** | `save_mode` | `video`, `frames`, `video & frames` | Export mode selection. |
+| **Required Input** | `images` | `IMAGE` | Input video frame batch. |
+| **Required Input** | `file_path` | `output/video` | Output destination folder. |
+| **Required Input** | `container` | `mp4`, `mkv`, `webm`, `mov` | Target video container format. |
+| **Required Input** | `video_codec` | `h264`, `h265`, `vp9`, `av1`, `prores`, `dnxhr` | Video codec for encoding. |
+| **Required Input** | `fps` | `24` | Target framerate (1–240 FPS). |
+| **Required Input** | `crf` | `23` | Quality factor (lower = higher quality, 0–51). |
+| **Required Input** | `preset` | `fast` (`ultrafast` ... `veryslow`) | Encoder speed vs. compression efficiency. |
+| **Optional Input** | `audio` | `AUDIO` | Optional audio track to mux into video. |
+| **Optional Input** | `loop_still_to_audio` | `True` | Loop single image to match audio duration. |
+| **Optional Input** | `frames_dir` | `""` | Subfolder name for extracted image frames. |
+| **Optional Input** | `frames_select` | `"-2"` | Frame selection criteria (`-2` last, `-1` all, `0` first, or list). |
+| **Output** | `images` | `IMAGE` | Passthrough image batch (or preview sequence). |
+| **Output** | `video_path` | `STRING` | File path of the saved output video. |
+
+---
+
+## Installation
+
+1. Navigate to your ComfyUI `custom_nodes` directory:
    ```bash
-   pip install numpy pillow imageio imageio-ffmpeg
+   cd ComfyUI/custom_nodes
    ```
-3. Start ComfyUI på nytt. Nodene vil nå være tilgjengelige under mappen **`Dehypnotic`** i nodemenyen!
+2. Clone this repository:
+   ```bash
+   git clone https://github.com/your-username/ComfyUI-Dehypnotic.git
+   ```
+3. Restart ComfyUI.
+
+---
+
+## License
+
+MIT License. Feel free to modify and adapt these custom nodes for your ComfyUI workflows.
