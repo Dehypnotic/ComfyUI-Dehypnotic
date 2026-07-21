@@ -1,6 +1,6 @@
 # ComfyUI-Dehypnotic Custom Nodes
 
-A suite of feature-rich, high-performance custom nodes for [ComfyUI](https://github.com/comfyanonymous/ComfyUI). This repository provides enhanced nodes for image, video, audio saving, dynamic aspect ratio calculation, wireless data rerouting, and text generation.
+A suite of feature-rich, high-performance custom nodes for [ComfyUI](https://github.com/comfyanonymous/ComfyUI). This repository provides nodes for image, video, audio saving, dynamic aspect ratio calculation, wireless data rerouting, and text generation.
 
 ---
 
@@ -207,13 +207,12 @@ A comprehensive video renderer and frame exporter node leveraging bundled `image
   ```json
   { "allowed_roots": ["D:/AudioExports", "E:/TeamShare/Audio"] }
   ```
-Alternatively (advanced): you can set the environment variable `SAVE_MP3_ALLOWED_PATHS` to point to the JSON file. This is optional — for most users it’s enough to place the JSON file next to the node or in one of the global ComfyUI locations listed below.
 - You can also place the file globally under your ComfyUI root:
-  - `<ComfyUI>/dehypnotic_save_allowed_paths.json`
-  - `<ComfyUI>/config/dehypnotic_save_allowed_paths.json`
-  - `<ComfyUI>/user/dehypnotic_save_allowed_paths.json`
-  - `<ComfyUI>/user/config/dehypnotic_save_allowed_paths.json`
-- The node refuses writes outside `output/` unless the path is under one of the whitelisted roots. Edit this file offline and restart ComfyUI.
+  - `<ComfyUI>/`
+  - `<ComfyUI>/config/`
+  - `<ComfyUI>/user/`
+  - `<ComfyUI>/user/config/`
+- The node refuses to write outside `output/` unless the path is under one of the whitelisted roots. Edit this file offline and restart ComfyUI.
 
 Whitelist behavior and safety
 - Recommended location under ComfyUI root (e.g., `ComfyUI/config/`) so it survives node updates.
