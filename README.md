@@ -140,6 +140,10 @@ A specialized audio output node for encoding audio inputs directly to MP3 format
 An advanced multi-format image saving node featuring sequence numbering, date-based folder grouping, image optimization, and workflow metadata embedding.
 
 #### Key Features:
+- **Interactive Thumbnail Gallery**: Displays a scrollable history of recently saved images directly on the node with an elegant, space-saving UI.
+- **Fullscreen Image Viewer**: Click any thumbnail in the gallery to open a full-screen, high-resolution preview overlay.
+- **Toggleable Preview**: Hide or show the gallery instantly via a custom toggle button to free up canvas space.
+- **Smart UI Layout**: Configurable parameters like `number_padding` and `number_start` are automatically moved to the node's right-click Properties panel, keeping the main node body compact.
 - **Multi-Format Export**: Supports PNG, JPG/JPEG, WEBP, GIF, BMP, and TIFF formats.
 - **Workflow Metadata Embedding**: Embeds full ComfyUI workflow metadata into PNG (via `tEXt` chunks) and WebP images (via XMP metadata).
 - **Sequential File Naming**: Automatic file index incrementing with customizable zero-padding (e.g. `0001`, `0002`) and prefix/delimiter settings.
