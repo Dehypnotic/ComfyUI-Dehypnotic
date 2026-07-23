@@ -93,7 +93,7 @@ app.registerExtension({
     setTimeout(() => {
       if (node.widgets) {
         for (const w of node.widgets) {
-          if (w.name === "number_padding" || w.name === "number_start") {
+          if (w.name === "number_padding" || w.name === "number_start" || w.name === "dpi") {
             // Hide the widget from the node body
             w.type = "hidden";
             w.computeSize = () => [0, -4];

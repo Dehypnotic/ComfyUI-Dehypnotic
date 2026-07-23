@@ -98,7 +98,7 @@ class SaveImages:
 				"quality": ("INT", {"default": 100, "min": 1, "max": 100}),
 				"optimize_image": ("BOOLEAN", {"default": True}),
 				"lossless_webp": ("BOOLEAN", {"default": True}),
-				"dpi": ("INT", {"default": 300, "min": 1, "max": 1200, "advanced": True}),
+				"dpi": ("INT", {"default": 300, "min": 1, "max": 1200, "display": "property"}),
 				"embed_workflow": ("BOOLEAN", {"default": False}),
 			},
 		}
