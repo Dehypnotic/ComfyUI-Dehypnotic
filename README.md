@@ -245,7 +245,7 @@ Examples
 
 ## Installation
 
-### Install it from ComfyUI Manager, or
+Install from ComfyUI Manager (search for Dehypnotic), or
 
 1. Navigate to your ComfyUI `custom_nodes` directory:
    ```bash
