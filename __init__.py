@@ -24,7 +24,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DehypnoticGetNode": "🧘 Get Dehypnotic",
     "AspectRatioAdvanced": "AspectRatioAdvanced - DEPRECATED - REPLACE",
     "dehypnotic_AspectRatio": "🧘 AspectRatio (Dehypnotic)",
-    "SaveAudioMP3Dehypnotic": "🧘 Save MP3 (Dehypnotic)",
+    "SaveAudioMP3Dehypnotic": "🧘 Save Audio (Dehypnotic)",
     "SaveImagesDehypnotic": "🧘 Save Images (Dehypnotic)",
     "SaveVideoDehypnotic": "🧘 Save Video & Frames (Dehypnotic)",
     "NumberedText": "NumberedText - DEPRECATED - REPLACE",
