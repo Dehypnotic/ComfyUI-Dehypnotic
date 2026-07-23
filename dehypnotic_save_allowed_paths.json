@@ -9,4 +9,4 @@
 # The node folder may be overwritten by future updates.
 # Example:
 # { "allowed_roots": ["D:/ImageExports", "E:/TeamShare/Assets"] }
-{ "allowed_roots": [] }
+{ "allowed_roots": ["D:/Backup"] }
