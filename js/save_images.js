@@ -162,11 +162,9 @@ app.registerExtension({
       letter-spacing: 0.3px;
     `;
     toggleBtn.addEventListener("mouseover", () => {
-      // Only apply hover effect if NOT active (Show Preview state)
-      if (!node.properties.showThumbnails) {
-        toggleBtn.style.borderColor = "#52525b";
-        toggleBtn.style.color = "#f4f4f5";
-      }
+      // Lighten the green border and text on hover
+      toggleBtn.style.borderColor = "#34d399";
+      toggleBtn.style.color = "#ffffff";
     });
     toggleBtn.addEventListener("mouseout", () => {
       updateToggleStyle();
@@ -175,13 +173,9 @@ app.registerExtension({
     const updateToggleStyle = () => {
       const on = node.properties.showThumbnails;
       toggleBtn.textContent = on ? "▼ Hide Preview" : "▶ Show Preview";
-      toggleBtn.style.background = on
-        ? "rgba(16, 185, 129, 0.12)"
-        : "#27272a";
-      toggleBtn.style.borderColor = on
-        ? "#10b981"
-        : "#3f3f46";
-      toggleBtn.style.color = on ? TOGGLE_COLOR_ON : TOGGLE_COLOR_OFF;
+      toggleBtn.style.background = "rgba(16, 185, 129, 0.12)";
+      toggleBtn.style.borderColor = "#10b981";
+      toggleBtn.style.color = TOGGLE_COLOR_ON;
     };
 
     toggleBtn.addEventListener("click", (e) => {

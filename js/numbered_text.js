@@ -778,6 +778,14 @@ app.registerExtension({
                 node.onConfigure = function (info) {
                     origOnConfigure?.apply(this, arguments);
                     renderList(listContainer, textWidget, node);
+                    // Force node to snap to correct height after workflow restores a (possibly larger) saved size.
+                    // Preserve the saved width so the node doesn't become too narrow — only the height is corrected.
+                    setTimeout(() => {
+                        const targetSize = node.computeSize();
+                        const savedWidth = node.size[0];
+                        node.setSize([Math.max(savedWidth, targetSize[0]), targetSize[1]]);
+                        app.graph.setDirtyCanvas(true, true);
+                    }, 50);
                 };
             }
         }
