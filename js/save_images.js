@@ -190,6 +190,10 @@ app.registerExtension({
       updateToggleStyle();
       updateVisibility();
       node.setDirtyCanvas(true, true);
+      requestAnimationFrame(() => {
+        app.graph?.setDirtyCanvas(true, true);
+        app.canvas?.draw?.(true, true);
+      });
     });
 
     // Gallery scroll container
