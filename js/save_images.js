@@ -14,6 +14,61 @@ const TOGGLE_COLOR_OFF = "#a1a1aa";
 const THUMB_SIZE = 80;        // Thumbnail square size (px)
 const THUMB_GAP = 4;          // Gap between thumbnails (px)
 
+function showImageOverlay(src) {
+  const overlay = document.createElement("div");
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+    flex-direction: column;
+  `;
+  
+  const largeImg = document.createElement("img");
+  largeImg.src = src;
+  largeImg.style.cssText = `
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  `;
+  
+  const closeText = document.createElement("div");
+  closeText.textContent = "Click anywhere or press ESC to close";
+  closeText.style.cssText = `
+    color: #ccc;
+    font-family: sans-serif;
+    font-size: 14px;
+    margin-top: 15px;
+  `;
+  
+  overlay.appendChild(largeImg);
+  overlay.appendChild(closeText);
+  
+  const removeOverlay = () => {
+    if (overlay.parentNode) {
+      document.body.removeChild(overlay);
+      document.removeEventListener("keydown", escListener);
+    }
+  };
+  
+  const escListener = (e) => {
+    if (e.key === "Escape") {
+      removeOverlay();
+    }
+  };
+  
+  overlay.onclick = removeOverlay;
+  document.addEventListener("keydown", escListener);
+  
+  document.body.appendChild(overlay);
+}
+
 app.registerExtension({
   name: EXTENSION_NAME,
 
@@ -25,6 +80,15 @@ app.registerExtension({
       node.properties.showThumbnails = true;
     }
 
+    // ── Enforce 20% wider minimum width ───────────────────────────────────
+    const origComputeSize = node.computeSize;
+    node.computeSize = function (out) {
+      const size = origComputeSize ? origComputeSize.apply(this, arguments) : [210, 26];
+      size[0] = Math.max(size[0], 300); // Default is usually ~210, 260 is ~20% wider
+      return size;
+    }; 
+    node.size[0] = Math.max(node.size[0], 300);
+
     // ── Move specific widgets to Properties Panel ─────────────────────────
     setTimeout(() => {
       if (node.widgets) {
@@ -33,12 +97,12 @@ app.registerExtension({
             // Hide the widget from the node body
             w.type = "hidden";
             w.computeSize = () => [0, -4];
-            
+
             // Register as a property so it shows in the Properties menu
             if (node.properties[w.name] === undefined) {
               node.properties[w.name] = w.value;
             }
-            
+
             // Tell LiteGraph it's an integer so it doesn't show 3 decimals
             node.properties_info = node.properties_info || [];
             if (!node.properties_info.find((p) => p.name === w.name)) {
@@ -213,7 +277,7 @@ app.registerExtension({
           return [node.size[0], WIDGET_HEIGHT];
         };
       }
-      
+
       // Force LiteGraph to recalculate the node's bounds. 
       // Setting height to 10 causes setSize to clamp to the new minimum needed.
       if (node.size) {
@@ -257,7 +321,7 @@ app.registerExtension({
       // Update file path text
       if (paths && paths.length > 0) {
         const lastPath = paths[paths.length - 1];
-        
+
         let displayPath = lastPath;
         const parts = lastPath.split(/[/\\]/);
         if (parts.length > 4) {
@@ -270,10 +334,10 @@ app.registerExtension({
         const lbl = document.createElement("span");
         lbl.style.color = "#707070";
         lbl.textContent = "Last saved: ";
-        
+
         const val = document.createElement("span");
         val.textContent = displayPath;
-        
+
         pathEl.appendChild(lbl);
         pathEl.appendChild(val);
       }
@@ -281,7 +345,7 @@ app.registerExtension({
       // Update thumbnails
       if (imageInfos && imageInfos.length > 0 && gal) {
         if (emptyEl && emptyEl.parentNode === gal) {
-           gal.removeChild(emptyEl);
+          gal.removeChild(emptyEl);
         }
 
         for (const info of imageInfos) {
@@ -296,7 +360,17 @@ app.registerExtension({
             display: flex;
             align-items: center;
             justify-content: center;
+            cursor: pointer;
+            transition: outline 0.15s;
           `;
+          
+          thumb.addEventListener("mouseover", () => thumb.style.outline = "1px solid #10b981");
+          thumb.addEventListener("mouseout", () => thumb.style.outline = "none");
+          
+          thumb.onclick = (e) => {
+            e.stopPropagation();
+            showImageOverlay(img.src);
+          };
 
           const img = document.createElement("img");
           const params = new URLSearchParams({
