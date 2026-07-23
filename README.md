@@ -245,6 +245,8 @@ Examples
 
 ## Installation
 
+### Install it from ComfyUI Manager, or
+
 1. Navigate to your ComfyUI `custom_nodes` directory:
    ```bash
    cd ComfyUI/custom_nodes
