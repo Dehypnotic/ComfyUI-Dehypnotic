@@ -148,6 +148,7 @@ An advanced multi-format image saving node featuring sequence numbering, date-ba
 - **Workflow Metadata Embedding**: Embeds full ComfyUI workflow metadata into PNG (via `tEXt` chunks) and WebP images (via XMP metadata).
 - **Sequential File Naming**: Automatic file index incrementing with customizable zero-padding (e.g. `0001`, `0002`) and prefix/delimiter settings.
 - **Quality & Compression Controls**: Configurable image quality percentage, WEBP lossless encoding option, PNG/JPG image optimization, and custom DPI metadata.
+- **Compactness**: `number_padding`, `number_start`, and `dpi` moved to the properties panel for a more compact node.
 
 #### Inputs & Outputs:
 | Type | Name | Default | Description |
