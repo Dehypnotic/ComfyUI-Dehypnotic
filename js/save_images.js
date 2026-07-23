@@ -324,10 +324,23 @@ app.registerExtension({
 
         let displayPath = lastPath;
         const parts = lastPath.split(/[/\\]/);
-        if (parts.length > 4) {
-          const first = parts.slice(0, 2).join("\\");
-          const lastTwo = parts.slice(-2).join("\\");
-          displayPath = `${first}\\...\\${lastTwo}`;
+        
+        const filePathWidget = this.widgets?.find(w => w.name === "file_path");
+        const isDefaultOutput = !filePathWidget || !filePathWidget.value || filePathWidget.value.trim() === "";
+
+        if (isDefaultOutput) {
+          const outIdx = parts.lastIndexOf("output");
+          if (outIdx !== -1) {
+            displayPath = parts.slice(outIdx).join("\\");
+          } else if (parts.length > 3) {
+            displayPath = `...\\${parts.slice(-3).join("\\")}`;
+          }
+        } else {
+          if (parts.length > 4) {
+            const first = parts.slice(0, 2).join("\\");
+            const lastTwo = parts.slice(-2).join("\\");
+            displayPath = `${first}\\...\\${lastTwo}`;
+          }
         }
 
         pathEl.innerHTML = "";
