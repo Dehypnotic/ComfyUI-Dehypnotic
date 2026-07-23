@@ -28,6 +28,7 @@ const WIDGET_ORDER = [
   "file_path",
   "date_subfolder_pattern",
   "filename_prefix",
+  "autoplay",
   "format",
   // mp3
   "bitrate_mode",
@@ -45,7 +46,7 @@ const WIDGET_ORDER = [
 const WIDGET_ORDER_SET = new Set(WIDGET_ORDER);
 
 // ── Layout ───────────────────────────────────────────────────────────────────
-const PLAYER_WIDGET_HEIGHT = 98;
+const PLAYER_WIDGET_HEIGHT = 110;
 
 // ── CSS (injected once) ──────────────────────────────────────────────────────
 let _cssInjected = false;
@@ -63,13 +64,12 @@ function injectCSS() {
     }
     .dh-audio-path {
       font-size: 10px;
-      color: #888;
+      color: #34d399;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       text-align: center;
-      padding: 0 4px 2px;
-      height: 14px;
+      padding: 8px 4px 6px;
       line-height: 14px;
       flex-shrink: 0;
     }
@@ -353,7 +353,7 @@ function buildPlayerWidget() {
   blockEvents.forEach((evt) => root.addEventListener(evt, (e) => e.stopPropagation()));
 
   // ── Public API ────────────────────────────────────────────────────────────
-  root._dhLoadAudio = (info, savedPath) => {
+  root._dhLoadAudio = (info, savedPath, autoplayEnabled = true) => {
     audio.pause();
     audio.src = buildAudioUrl(info);
     audio.currentTime = 0;
@@ -366,12 +366,14 @@ function buildPlayerWidget() {
 
     if (savedPath) {
       const filename = savedPath.replace(/\\/g, "/").split("/").pop() ?? savedPath;
-      pathLabel.innerHTML = `<span style="color:#555">Saved: </span>${filename}`;
+      pathLabel.innerHTML = `<span style="color:#71717a">Saved: </span>${filename}`;
     } else {
       pathLabel.textContent = "";
     }
 
-    audio.addEventListener("canplay", () => audio.play().catch(() => {}), { once: true });
+    if (autoplayEnabled) {
+      audio.addEventListener("canplay", () => audio.play().catch(() => {}), { once: true });
+    }
   };
 
   return root;
@@ -439,8 +441,12 @@ app.registerExtension({
       origOnExecuted?.apply(this, arguments);
       const previews  = message?.audio_preview;
       const savedPath = message?.saved_path?.[0] ?? null;
+      
+      const autoplayWidget = this.widgets?.find((w) => w.name === "autoplay");
+      const doAutoplay = (autoplayWidget?.value !== "off");
+
       if (previews?.length > 0 && this._dhPlayerRoot?._dhLoadAudio) {
-        this._dhPlayerRoot._dhLoadAudio(previews[0], savedPath);
+        this._dhPlayerRoot._dhLoadAudio(previews[0], savedPath, doAutoplay);
       }
     };
 

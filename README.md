@@ -11,7 +11,7 @@ A suite of feature-rich, high-performance custom nodes for [ComfyUI](https://git
   - [🧘 Set Dehypnotic & Get Dehypnotic](#-set-dehypnotic--get-dehypnotic)
   - [🧘 NumberedText (Dehypnotic)](#-numberedtext-dehypnotic)
   - [🧘 RangeToString (Dehypnotic)](#-rangetostring-dehypnotic)
-  - [🧘 Save MP3 (Dehypnotic)](#-save-mp3-dehypnotic)
+  - [🧘 Save Audio (Dehypnotic)](#-save-audio-dehypnotic)
   - [🧘 Save Images (Dehypnotic)](#-save-images-dehypnotic)
   - [🧘 Save Video & Frames (Dehypnotic)](#-save-video--frames-dehypnotic)
 - [Security and External Save Paths](#security-and-external-save-paths-comfyui-manager-compliant)
@@ -107,29 +107,43 @@ Generates a formatted string representing a numerical sequence. Useful for batch
 
 ---
 
-### 🧘 Save MP3 (Dehypnotic)
-**Class Name**: `SaveAudioMP3Dehypnotic`  
+### 🧘 Save Audio (Dehypnotic)
+**Class Name**: `SaveAudioMP3`  
 **Category**: `Dehypnotic/💾 IO`
 
-A specialized audio output node for encoding audio inputs directly to MP3 format with flexible bitrate controls and path templating.
+A specialized, multi-format audio output node with dynamic UI and built-in playback. Seamlessly encode audio to MP3, WAV, FLAC, or Opus.
 
 #### Key Features:
-- **Audio Format Auto-Normalization**: Handles mono/stereo inputs, arbitrary sample rates, numpy arrays, and PyTorch audio tensors seamlessy.
-- **Encoder Fallbacks**: Uses `imageio-ffmpeg` or system FFmpeg binary, with automatic fallback to `lameenc`.
-- **Bitrate Modes & Quality Levels**: Supports `variable` (VBR), `constant` (CBR), and `average` (ABR) encoding across `low`, `medium`, and `high` quality presets.
+- **Multi-Format Support**: Save audio as MP3, WAV (16-bit or 24-bit), FLAC, or Opus.
+- **Dynamic Interface**: The node's widget layout automatically adapts to show only the settings relevant to the selected audio format, keeping your graph clean.
+- **Inline Audio Player**: Preview your saved audio directly inside the ComfyUI node. Includes play/pause, seek bar, volume control, and an autoplay toggle.
+- **Format-Specific Tuning**:
+  - MP3: `variable` (VBR), `constant` (CBR), and `average` (ABR) encoding across `low`, `medium`, and `high` quality.
+  - WAV/FLAC: Choose target sample rate and 16-bit or 24-bit depth.
+  - FLAC: Configurable compression level.
+  - Opus: Configurable bitrate, application mode (`audio` or `voip`), and VBR toggle.
+- **Audio Format Auto-Normalization**: Handles mono/stereo inputs, arbitrary sample rates, numpy arrays, and PyTorch audio tensors seamlessly via FFmpeg.
 - **Dynamic Path Expansion**: Supports date placeholders (`%Y-%m-%d`), timestamp variables, environment variables, and unique IDs in output paths.
 
 #### Inputs & Outputs:
-| Type | Name | Data Type | Description |
+| Type | Name | Options / Type | Description |
 | :--- | :--- | :--- | :--- |
 | **Required Input** | `audio` | `AUDIO` | Audio input stream or dictionary structure. |
 | **Required Input** | `file_path` | `STRING` | Output directory path. |
 | **Required Input** | `date_subfolder_pattern` | `STRING` | Strftime pattern for subfolders (e.g., `%Y-%m-%d`). |
 | **Required Input** | `filename_prefix` | `STRING` | Filename prefix (e.g., `ComfyUI`). |
-| **Required Input** | `bitrate_mode` | `["variable", "constant", "average"]` | MP3 encoding strategy. |
-| **Required Input** | `quality` | `["low", "medium", "high"]` | Audio quality / target bitrate setting. |
+| **Required Input** | `autoplay` | `["on", "off"]` | Toggle automatic playback in the node player after generation. |
+| **Required Input** | `format` | `["mp3", "wav", "flac", "opus"]` | Desired output audio format. |
+| **Dynamic Input** | `bitrate_mode` | `["variable", "constant", "average"]` | MP3: Encoding strategy. |
+| **Dynamic Input** | `quality` | `["low", "medium", "high"]` | MP3: Audio quality / target bitrate. |
+| **Dynamic Input** | `sample_rate` | `["source", "16000", "22050", ...]` | WAV/FLAC: Target sample rate in Hz. |
+| **Dynamic Input** | `bit_depth` | `["16", "24"]` | WAV/FLAC: Audio bit depth. |
+| **Dynamic Input** | `flac_compression`| `INT` | FLAC: Compression level from 0 (fast/large) to 8 (slow/small). |
+| **Dynamic Input** | `opus_bitrate` | `INT` | Opus: Target bitrate (kbps). |
+| **Dynamic Input** | `opus_application`| `["audio", "voip"]` | Opus: Optimization mode. |
+| **Dynamic Input** | `opus_vbr` | `["on", "off"]` | Opus: Variable bitrate toggle. |
 | **Output** | `audio` | `AUDIO` | Passthrough of input audio data. |
-| **Output** | `bitrate_info` | `STRING` | Detailed summary of encoding parameters used. |
+| **Output** | `format_info` | `STRING` | Detailed summary of encoding parameters used. |
 
 ---
 

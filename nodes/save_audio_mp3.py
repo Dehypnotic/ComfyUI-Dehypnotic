@@ -529,6 +529,13 @@ class SaveAudioMP3:
     formatspesifikke parametere og dynamisk JS-widget-synlighet.
     """
 
+    DESCRIPTION = (
+    "Saves to ComfyUI/output by default. To allow external locations, create a file named "
+	" dehypnotic_save_allowed_paths.json containing for example: { \"allowed_roots\": [\"D:/AudioExports\", \"E:/TeamShare/Audio\"] }. "
+	"Preferably place it in a global area like e.g. <ComfyUI>/user/config/. Read the Github repository at "
+    "https://github.com/Dehypnotic/ComfyUI-Dehypnotic for more info."
+    )
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -537,6 +544,9 @@ class SaveAudioMP3:
                 "file_path":              ("STRING",  {"default": "audio",    "multiline": False}),
                 "date_subfolder_pattern": ("STRING",  {"default": "%Y-%m-%d", "multiline": False}),
                 "filename_prefix":        ("STRING",  {"default": "ComfyUI",  "multiline": False}),
+
+                # ── Autoplay ─────────────────────────────────────────────────
+                "autoplay":               (["on", "off"], {"default": "on"}),
 
                 # ── Format selector ──────────────────────────────────────────
                 "format":                 (["mp3", "wav", "flac", "opus"], {"default": "mp3"}),
@@ -740,6 +750,7 @@ class SaveAudioMP3:
         file_path,
         date_subfolder_pattern,
         filename_prefix,
+        autoplay="on",
         format="mp3",
         # MP3
         bitrate_mode="variable",
