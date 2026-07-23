@@ -92,13 +92,13 @@ class SaveImages:
 				"date_subfolder_pattern": ("STRING", {"default": "%Y-%m-%d"}),
 				"filename_prefix": ("STRING", {"default": "QIE"}),
 				"filename_delimiter": ("STRING", {"default": "_"}),
-				"number_padding": ("INT", {"default": 4, "min": 1, "max": 10}),
-				"number_start": ("INT", {"default": 1, "min": 0, "max": 1_000_000}),
+				"number_padding": ("INT", {"default": 4, "min": 1, "max": 10, "advanced": True}),
+				"number_start": ("INT", {"default": 1, "min": 0, "max": 1_000_000, "advanced": True}),
 				"extension": (tuple(VALID_EXTS), {"default": "png"}),
 				"quality": ("INT", {"default": 100, "min": 1, "max": 100}),
 				"optimize_image": ("BOOLEAN", {"default": True}),
 				"lossless_webp": ("BOOLEAN", {"default": True}),
-				"dpi": ("INT", {"default": 300, "min": 1, "max": 1200}),
+				"dpi": ("INT", {"default": 300, "min": 1, "max": 1200, "advanced": True}),
 				"embed_workflow": ("BOOLEAN", {"default": False}),
 			},
 		}
@@ -358,7 +358,15 @@ class SaveImages:
 
 		workflow_json = self._get_workflow_json() if embed_workflow else None
 
+		# Get ComfyUI temp directory for thumbnails
+		try:
+			import folder_paths
+			temp_dir = folder_paths.get_temp_directory()
+		except Exception:
+			temp_dir = None
+
 		saved_paths: List[str] = []
+		ui_images: List[dict] = []
 		for image_tensor in images:
 			pil_img = to_pil(image_tensor.cpu().numpy())
 
@@ -385,7 +393,30 @@ class SaveImages:
 			)
 
 			saved_paths.append(str(path))
+
+			# Generate thumbnail in ComfyUI temp directory
+			if temp_dir:
+				try:
+					thumb = pil_img.copy()
+					thumb.thumbnail((256, 256), Image.LANCZOS)
+					thumb_rgb = thumb.convert("RGB") if thumb.mode != "RGB" else thumb
+					thumb_name = f"dehypnotic_thumb_{uuid.uuid4().hex[:12]}.jpg"
+					thumb_path = os.path.join(temp_dir, thumb_name)
+					thumb_rgb.save(thumb_path, format="JPEG", quality=60, optimize=True)
+					ui_images.append({
+						"filename": thumb_name,
+						"subfolder": "",
+						"type": "temp",
+					})
+				except Exception:
+					pass  # Don't fail the save if thumbnail generation fails
+
 			seq += 1
 
-		return (images, "\n".join(saved_paths))
-
+		return {
+			"ui": {
+				"thumbnails": ui_images,
+				"saved_paths": saved_paths,
+			},
+			"result": (images, "\n".join(saved_paths)),
+		}
