@@ -619,6 +619,21 @@ class SaveAudioMP3:
         # Encode til valgt sted
         _encode_mp3(pcm, sr, out_path, bitrate_mode, quality)
 
+        # --- Lagre temp-kopi for JS-forhåndsvisning ---
+        try:
+            import folder_paths as _fp  # type: ignore
+            temp_dir = _fp.get_temp_directory()
+        except Exception:
+            temp_dir = os.path.join(os.getcwd(), "temp")
+        _ensure_dir(temp_dir)
+
+        _PREVIEW_FILENAME = "dehypnotic_preview_mp3.mp3"
+        temp_preview_path = os.path.join(temp_dir, _PREVIEW_FILENAME)
+        try:
+            _encode_mp3(pcm, sr, temp_preview_path, bitrate_mode, quality)
+        except Exception as e:
+            print(f"[SaveAudioMP3] Advarsel: Kunne ikke skrive temp-forhåndsvisning: {e}")
+
         # Bygg infosnutt om bitrate-valgene (9 kombinasjoner)
         info_lines = []
         info_lines.append("Bitrate options (kbps)")
@@ -642,6 +657,18 @@ class SaveAudioMP3:
         info_lines.append(f"Selected: mode={bitrate_mode}, quality={quality}")
         bitrate_info = "\n".join(info_lines)
 
+        # Bygg ui-output for JS-spilleren
+        ui = {
+            "audio_preview": [
+                {
+                    "filename": _PREVIEW_FILENAME,
+                    "subfolder": "",
+                    "type": "temp",
+                }
+            ],
+            "saved_path": [out_path],
+        }
+
         # Returner AUDIO og tekst for visningsnode
-        return (audio, bitrate_info)
+        return {"ui": ui, "result": (audio, bitrate_info)}
 
