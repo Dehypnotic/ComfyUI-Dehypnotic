@@ -9,6 +9,8 @@ const NODE_TYPE = "SaveImagesDehypnotic";
 // ── Layout constants ────────────────────────────────────────────────────────
 const GALLERY_HEIGHT = 360;   // Fixed gallery viewport height (px)
 const WIDGET_HEIGHT = 400;    // Total widget height including path text + toggle
+const TOGGLE_COLOR_ON = "#34d399";
+const TOGGLE_COLOR_OFF = "#a1a1aa";
 const THUMB_SIZE = 80;        // Thumbnail square size (px)
 const THUMB_GAP = 4;          // Gap between thumbnails (px)
 
@@ -40,19 +42,24 @@ app.registerExtension({
     toggleBtn.style.cssText = `
       width: 100%;
       height: 22px;
-      border: 1px solid rgba(80, 160, 220, 0.25);
-      border-radius: 3px;
-      background: rgba(80, 160, 220, 0.10);
-      color: #80c8ff;
+      border: 1px solid #3f3f46;
+      border-radius: 4px;
+      background: #27272a;
+      color: #a1a1aa;
       font: bold 10px Inter, sans-serif;
       cursor: pointer;
       outline: none;
-      transition: background 0.15s, border-color 0.15s;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
       flex-shrink: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
     `;
     toggleBtn.addEventListener("mouseover", () => {
-      toggleBtn.style.background = "rgba(80, 160, 220, 0.20)";
-      toggleBtn.style.borderColor = "rgba(80, 160, 220, 0.4)";
+      // Only apply hover effect if NOT active (Show Preview state)
+      if (!node.properties.showThumbnails) {
+        toggleBtn.style.borderColor = "#52525b";
+        toggleBtn.style.color = "#f4f4f5";
+      }
     });
     toggleBtn.addEventListener("mouseout", () => {
       updateToggleStyle();
@@ -62,12 +69,12 @@ app.registerExtension({
       const on = node.properties.showThumbnails;
       toggleBtn.textContent = on ? "▼ Hide Preview" : "▶ Show Preview";
       toggleBtn.style.background = on
-        ? "rgba(80, 160, 220, 0.10)"
-        : "rgba(100, 100, 100, 0.06)";
+        ? "rgba(16, 185, 129, 0.12)"
+        : "#27272a";
       toggleBtn.style.borderColor = on
-        ? "rgba(80, 160, 220, 0.25)"
-        : "rgba(100, 100, 100, 0.15)";
-      toggleBtn.style.color = on ? "#80c8ff" : "#666";
+        ? "#10b981"
+        : "#3f3f46";
+      toggleBtn.style.color = on ? TOGGLE_COLOR_ON : TOGGLE_COLOR_OFF;
     };
 
     toggleBtn.addEventListener("click", (e) => {
