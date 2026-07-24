@@ -84,8 +84,8 @@ class SaveImages:
 	"""Lagrer bilder til disk i flere formater med sekvensiell navngiving."""
 	DESCRIPTION = (
     "Saves to ComfyUI/output by default. To allow external locations, create a file named "
-	" dehypnotic_save_allowed_paths.json containing for example: { \"allowed_roots\": [\"D:/AudioExports\", \"E:/TeamShare/Audio\"] }. "
-	"Preferably place it in a global area like e.g. <ComfyUI>/user/config/. Read the Github repository for more inf. I have moved the "
+	" dehypnotic_save_allowed_paths.json containing for example: { \"allowed_roots\": [\"D:/ImageExports\", \"E:/TeamShare/Images\"] }. "
+	"Preferably place it in a global area like <ComfyUI>/user/config/. Read the Github repository for more inf. I have moved the "
 	"more infrequently adjusted settings number_paddings, number_start, and DPI to properties for compactness. You find it when you "
 	"right-click the node."
     )
