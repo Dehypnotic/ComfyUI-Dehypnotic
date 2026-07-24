@@ -1,4 +1,4 @@
-<span style="color:blue">some *blue* text</span>.### <span style="color:red"> This is my only repository now, so delete any old folders you may have in ComfyUI\custom_nodes to avoid conflicts. </span>
+#### Warning: This is my only repository now, so delete any old folders you may have in ComfyUI\custom_nodes to avoid conflicts.
 
 # ComfyUI-Dehypnotic Custom Nodes
 
