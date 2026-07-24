@@ -1,4 +1,4 @@
-﻿import { app } from "../../scripts/app.js";
+import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 
 // --- Dehypnotic Save Video: Properties + Video Preview Extension -------------
@@ -89,26 +89,25 @@ app.registerExtension({
     const container = document.createElement("div");
     container.style.cssText = `
       width: 100%;
-      background: #111;
       border-radius: 4px;
       overflow: hidden;
       position: relative;
     `;
 
-    // Path label
+    // Path label — hidden until first execution
     const pathLabel = document.createElement("div");
     pathLabel.style.cssText = `
+      display: none;
       width: 100%;
       font-size: 10px;
       color: #888;
       text-align: center;
-      padding: 3px 6px;
+      padding: 2px 6px;
       box-sizing: border-box;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       font-family: monospace;
-      min-height: 18px;
     `;
     container.appendChild(pathLabel);
 
@@ -125,18 +124,6 @@ app.registerExtension({
     `;
     container.appendChild(videoEl);
 
-    // Placeholder shown before first execution
-    const placeholder = document.createElement("div");
-    placeholder.style.cssText = `
-      width: 100%;
-      padding: 16px 0;
-      text-align: center;
-      color: #444;
-      font-size: 11px;
-      font-family: Inter, sans-serif;
-    `;
-    placeholder.textContent = "Run the node to see video preview";
-    container.appendChild(placeholder);
 
     // Block canvas events from propagating through the widget
     const blockEvents = ["mousedown", "mouseup", "click", "dblclick",
@@ -150,12 +137,12 @@ app.registerExtension({
     let aspectRatio = null;
 
     previewWidget.computeSize = function (width) {
-      const pathH = 22;
       if (aspectRatio && videoEl.style.display !== "none") {
+        const pathH = pathLabel.style.display !== "none" ? 20 : 0;
         const videoH = (node.size[0] - 20) / aspectRatio;
         return [width, pathH + videoH + 4];
       }
-      return [width, pathH + 36]; // placeholder height
+      return [width, -4]; // no content yet — collapse widget
     };
 
     videoEl.addEventListener("loadedmetadata", () => {
@@ -167,8 +154,6 @@ app.registerExtension({
 
     videoEl.addEventListener("error", () => {
       videoEl.style.display = "none";
-      placeholder.style.display = "block";
-      placeholder.textContent = "Preview unavailable";
       aspectRatio = null;
       fitHeight(node);
     });
@@ -200,7 +185,6 @@ app.registerExtension({
       const url = api.apiURL(`/view?${params.toString()}`);
       videoEl.src = url;
       videoEl.style.display = "block";
-      placeholder.style.display = "none";
 
       // Show shortened path in label
       const text = message?.text || info.filename;
@@ -209,6 +193,7 @@ app.registerExtension({
       pathLabel.textContent = outIdx >= 0
         ? parts.slice(outIdx).join("\\")
         : parts.slice(-3).join("\\");
+      pathLabel.style.display = "block";
 
       videoEl.play().catch(() => {});
       fitHeight(node);
