@@ -7,13 +7,50 @@ import { api } from "../../scripts/api.js";
 
 const EXTENSION_NAME = "Dehypnotic.SaveVideo";
 const NODE_TYPE = "SaveVideoDehypnotic";
-const PROPERTY_WIDGETS = ["number_padding", "number_start"];
+const PROPERTY_WIDGETS = ["number_padding", "number_start", "loop_still_to_audio", "show_progress"];
 
 // ---- helpers ----------------------------------------------------------------
 
 function fitHeight(node) {
   node.setSize([node.size[0], node.computeSize([node.size[0], node.size[1]])[1]]);
   node.graph?.setDirtyCanvas(true, true);
+}
+
+function hidePropertyWidgets(node) {
+  if (!node.widgets) return;
+  for (const w of node.widgets) {
+    if (PROPERTY_WIDGETS.includes(w.name)) {
+      w.type = "hidden";
+      w.computeSize = () => [0, -4];
+      w.draw = () => {};
+
+      if (node.properties[w.name] === undefined) {
+        node.properties[w.name] = w.value;
+      }
+
+      const isBool = typeof w.value === "boolean";
+      node.properties_info = node.properties_info || [];
+      if (!node.properties_info.find((p) => p.name === w.name)) {
+        if (isBool) {
+          node.properties_info.push({
+            name: w.name,
+            type: "boolean",
+          });
+        } else {
+          node.properties_info.push({
+            name: w.name,
+            type: "int",
+            step: 1,
+            precision: 0,
+            min: w.options?.min ?? 0,
+            max: w.options?.max ?? 1000000,
+          });
+        }
+      }
+    }
+  }
+  node.setSize(node.computeSize());
+  app.graph?.setDirtyCanvas(true, true);
 }
 
 // ---- main extension ---------------------------------------------------------
@@ -25,35 +62,11 @@ app.registerExtension({
     if (node.comfyClass !== NODE_TYPE) return;
 
     // =========================================================
-    // 1. Move number_padding + number_start to Properties panel
+    // 1. Move number_padding, number_start, loop_still_to_audio, show_progress to Properties panel
     // =========================================================
-    setTimeout(() => {
-      if (!node.widgets) return;
-      for (const w of node.widgets) {
-        if (PROPERTY_WIDGETS.includes(w.name)) {
-          w.type = "hidden";
-          w.computeSize = () => [0, -4];
-
-          if (node.properties[w.name] === undefined) {
-            node.properties[w.name] = w.value;
-          }
-
-          node.properties_info = node.properties_info || [];
-          if (!node.properties_info.find((p) => p.name === w.name)) {
-            node.properties_info.push({
-              name: w.name,
-              type: "int",
-              step: 1,
-              precision: 0,
-              min: w.options?.min ?? 0,
-              max: w.options?.max ?? 1000000,
-            });
-          }
-        }
-      }
-      node.setSize(node.computeSize());
-      app.graph?.setDirtyCanvas(true, true);
-    }, 100);
+    hidePropertyWidgets(node);
+    setTimeout(() => hidePropertyWidgets(node), 50);
+    setTimeout(() => hidePropertyWidgets(node), 150);
 
     // Sync property -> hidden widget so Python receives the value
     const origOnPropertyChanged = node.onPropertyChanged;
@@ -67,20 +80,9 @@ app.registerExtension({
     const origOnConfigure = node.onConfigure;
     node.onConfigure = function (info) {
       origOnConfigure?.apply(this, arguments);
-      setTimeout(() => {
-        if (!node.widgets) return;
-        for (const w of node.widgets) {
-          if (PROPERTY_WIDGETS.includes(w.name)) {
-            w.type = "hidden";
-            w.computeSize = () => [0, -4];
-            if (node.properties[w.name] !== undefined) {
-              w.value = node.properties[w.name];
-            }
-          }
-        }
-        node.setSize(node.computeSize());
-        app.graph?.setDirtyCanvas(true, true);
-      }, 100);
+      hidePropertyWidgets(node);
+      setTimeout(() => hidePropertyWidgets(node), 50);
+      setTimeout(() => hidePropertyWidgets(node), 150);
     };
 
     // =========================================================
@@ -111,7 +113,7 @@ app.registerExtension({
     `;
     container.appendChild(pathLabel);
 
-    // Video element
+    // Video element — native controls enabled; audio unmuted on hover
     const videoEl = document.createElement("video");
     videoEl.controls = true;
     videoEl.loop = true;
@@ -121,14 +123,12 @@ app.registerExtension({
       width: 100%;
       display: none;
       border-radius: 0 0 4px 4px;
+      cursor: pointer;
     `;
+    // Unmute on hover, re-mute on leave
+    videoEl.onmouseenter = () => { videoEl.muted = false; };
+    videoEl.onmouseleave = () => { videoEl.muted = true; };
     container.appendChild(videoEl);
-
-
-    // Block canvas events from propagating through the widget
-    const blockEvents = ["mousedown", "mouseup", "click", "dblclick",
-      "pointerdown", "pointerup", "pointermove", "wheel"];
-    blockEvents.forEach((evt) => container.addEventListener(evt, (e) => e.stopPropagation()));
 
     // Register as DOM widget
     const previewWidget = node.addDOMWidget("dh_video_preview", "custom_ui", container);
@@ -158,9 +158,10 @@ app.registerExtension({
       fitHeight(node);
     });
 
-    // Unmute on hover (like VHS)
-    videoEl.addEventListener("mouseenter", () => { videoEl.muted = false; });
-    videoEl.addEventListener("mouseleave", () => { videoEl.muted = true; });
+    // Block canvas events from propagating through the widget
+    const blockEvents = ["mousedown", "mouseup", "click", "dblclick",
+      "pointerdown", "pointerup", "pointermove", "wheel"];
+    blockEvents.forEach((evt) => container.addEventListener(evt, (e) => e.stopPropagation()));
 
     // =========================================================
     // 3. onExecuted: receive video_preview from backend
