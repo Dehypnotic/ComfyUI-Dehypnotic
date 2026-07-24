@@ -240,8 +240,7 @@ A streamlined video loading node with an interactive frontend, built-in file upl
 | **Output** | `audio` | `AUDIO` | Extracted audio track (if present). |
 | **Output** | `fps` | `FLOAT` | Video framerate. |
 
-<img width="301" height="674" alt="image" src="https://github.com/user-attachments/assets/9775022a-ac0f-4542-b0fb-786fb94e2722" />
-
+<img width="308" height="685" alt="image" src="https://github.com/user-attachments/assets/9fb96f61-f689-4c25-8b9e-327017b22554" />
 
 ---
 
