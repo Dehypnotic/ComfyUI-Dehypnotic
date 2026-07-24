@@ -633,27 +633,26 @@ class SaveVideo:
         # --- UI Output ---
         abs_path = video_path_str or str(final_video_dir.resolve())
 
-        # Build preview info for the JS frontend (same structure as VHS_VideoCombine)
+        # Always copy to a fixed temp file so the JS preview works regardless
+        # of where the permanent video was saved (even outside the output dir).
         extension = out_path.suffix.lstrip(".")
         try:
-            base_output = self._base_output_dir()
-            rel = out_path.resolve().relative_to(base_output.resolve())
-            preview_subfolder = str(rel.parent).replace("\\", "/")
-            if preview_subfolder == ".":
-                preview_subfolder = ""
-            preview_filename = out_path.name
-            preview_type = "output"
-        except ValueError:
-            preview_subfolder = ""
-            preview_filename = out_path.name
-            preview_type = "output"
+            from folder_paths import get_temp_directory  # type: ignore
+            temp_dir = Path(get_temp_directory())
+        except Exception:
+            temp_dir = Path(tempfile.gettempdir())
+
+        preview_filename = f"dh_savevideo_preview.{extension}"
+        temp_preview = temp_dir / preview_filename
+        import shutil
+        shutil.copy2(str(out_path), str(temp_preview))
 
         ui = {
             "text": abs_path,
             "video_preview": [{
                 "filename": preview_filename,
-                "subfolder": preview_subfolder,
-                "type": preview_type,
+                "subfolder": "",
+                "type": "temp",
                 "format": f"video/{extension}",
             }],
         }
