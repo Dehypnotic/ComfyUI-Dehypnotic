@@ -251,7 +251,13 @@ A comprehensive video renderer and frame exporter node leveraging bundled `image
 | **Output** | `images` | `IMAGE` | Passthrough image batch (or preview sequence). |
 | **Output** | `video_path` | `STRING` | File path of the saved output video. |
 
-<img width="236" height="628" alt="image" src="https://github.com/user-attachments/assets/33206e06-4c83-4d38-b85a-6e348f856974" />
+<table style="width:100%">
+  <tr>
+    <th><img width="236" height="628" alt="image" src="https://github.com/user-attachments/assets/33206e06-4c83-4d38-b85a-6e348f856974" /></th>
+    <th><img width="233" height="627" alt="image" src="https://github.com/user-attachments/assets/ddbde53e-7dcf-4684-8980-55b16dc56bc4" />
+</th>
+  </tr>
+</table>
 
 ---
 
