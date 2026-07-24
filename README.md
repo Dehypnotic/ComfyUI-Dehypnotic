@@ -16,7 +16,7 @@ A suite of feature-rich, high-performance custom nodes for [ComfyUI](https://git
   - [🧘 Save Audio (Dehypnotic)](#-save-audio-dehypnotic)
   - [🧘 Save Images (Dehypnotic)](#-save-images-dehypnotic)
   - [🧘 Load Video (Dehypnotic)](#-load-video-dehypnotic)
-  - [🧘 Save Video & Frames (Dehypnotic)](#-save-video--frames-dehypnotic)
+  - [🧘 Save Video (Dehypnotic)](#-save-video-dehypnotic)
 - [Security and External Save Paths](#security-and-external-save-paths-comfyui-manager-compliant)
 - [Installation](#installation)
 - [License](#license)
@@ -239,6 +239,9 @@ A streamlined video loading node with an interactive frontend, built-in file upl
 | **Output** | `images` | `IMAGE` | Extracted video frame sequence. |
 | **Output** | `audio` | `AUDIO` | Extracted audio track (if present). |
 | **Output** | `fps` | `FLOAT` | Video framerate. |
+
+<img width="301" height="674" alt="image" src="https://github.com/user-attachments/assets/9775022a-ac0f-4542-b0fb-786fb94e2722" />
+
 
 ---
 
