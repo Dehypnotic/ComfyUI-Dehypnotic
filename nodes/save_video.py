@@ -425,14 +425,13 @@ class SaveVideo:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "save_mode": (("video", "frames", "video & frames"), {"default": "video", "tooltip": "Choose whether to save video, frames, or both."}),
                 "images": ("IMAGE", {"tooltip": "Frame input. Batch data supported."}),
                 "file_path": ("STRING", {"default": "output/video", "tooltip": "Folder where the video is saved."}),
                 "date_subfolder_pattern": ("STRING", {"default": "%Y-%m-%d", "tooltip": "Optional strftime pattern or placeholders for subfolders."}),
                 "filename_prefix": ("STRING", {"default": "VID", "tooltip": "Filename prefix, e.g. VID_0001.mp4."}),
                 "filename_delimiter": ("STRING", {"default": "_", "tooltip": "Delimiter between prefix and sequence number."}),
-                "number_padding": ("INT", {"default": 4, "min": 1, "max": 10, "tooltip": "Digits in the sequence number (0001, 0002, ...)."}),
-                "number_start": ("INT", {"default": 1, "min": 0, "max": 1_000_000, "tooltip": "Starting value for the sequence number."}),
+                "number_padding": ("INT", {"default": 4, "min": 1, "max": 10, "tooltip": "Digits in the sequence number (0001, 0002, ...).", "display": "property"}),
+                "number_start": ("INT", {"default": 1, "min": 0, "max": 1_000_000, "tooltip": "Starting value for the sequence number.", "display": "property"}),
                 "container": (tuple(CONTAINER_OPTIONS.keys()), {"default": "mp4", "tooltip": "Container format (mp4, mkv, webm, mov)."}),
                 "video_codec": (tuple(VIDEO_CODEC_OPTIONS.keys()), {"default": "h264", "tooltip": "Video codec to use for encoding."}),
                 "fps": ("INT", {"default": 24, "min": 1, "max": 240, "tooltip": "Frames per second (CFR)."}),
@@ -443,11 +442,6 @@ class SaveVideo:
                 "audio": ("AUDIO", {"tooltip": "Optional audio track. Mono/stereo supported."}),
                 "loop_still_to_audio": ("BOOLEAN", {"default": True, "tooltip": "If only one frame plus audio, loop the frame to match audio length."}),
                 "show_progress": ("BOOLEAN", {"default": True, "tooltip": "Write progress information to the console."}),
-                "show_preview": ("BOOLEAN", {"default": False, "tooltip": "Generate preview sequence in the node output."}),
-                "preview_step": ("INT", {"default": 1, "min": 1, "max": 50, "tooltip": "Show every Nth frame in the preview sequence."}),
-                "preview_max_frames": ("INT", {"default": 24, "min": 1, "max": 120, "tooltip": "Maximum number of frames generated for preview."}),
-                "frames_dir": ("STRING", {"default": "", "tooltip": "Save selected frames here (relative to the video folder). Leave empty to skip."}),
-                "frames_select": ("STRING", {"default": "-2", "tooltip": "Frames to save: -2=last, -1=all, 0=first, or comma list (e.g. 0,5,10)."}),
             }
         }
 
@@ -611,7 +605,6 @@ class SaveVideo:
 
     def save(
         self,
-        save_mode,
         images,
         file_path,
         date_subfolder_pattern,
@@ -627,11 +620,6 @@ class SaveVideo:
         audio=None,
         loop_still_to_audio=True,
         show_progress=True,
-        show_preview=True,
-        preview_step=1,
-        preview_max_frames=24,
-        frames_dir="",
-        frames_select="-2",
     ):
         if imageio_ffmpeg is None:
             msg = (
@@ -701,26 +689,16 @@ class SaveVideo:
         if not frames:
             raise ValueError("No frames provided.")
 
-        mode = str(save_mode).strip().lower()
-        save_video = mode in ("video", "video & frames")
-        save_frames = mode in ("frames", "video & frames")
-        if not save_video and not save_frames:
-            save_video = True
-
         container_key = str(container).lower()
         codec_key = str(video_codec).lower()
         container_info = CONTAINER_OPTIONS.get(container_key)
         codec_info = VIDEO_CODEC_OPTIONS.get(codec_key)
 
-        if save_video:
-            if container_info is None: raise ValueError(f"Unsupported container '{container}'.")
-            if codec_info is None: raise ValueError(f"Unsupported video codec '{video_codec}'.")
-            if codec_key not in container_info["allowed_codecs"]:
-                allowed = ", ".join(sorted(container_info["allowed_codecs"]))
-                raise ValueError(f"Codec '{codec_key}' is not supported in '{container_key}'. Allowed: {allowed}.")
-        else:
-            container_info = {"extension": "bin", "audio_codec": None, "extra": []}
-            codec_info = VIDEO_CODEC_OPTIONS["h264"]
+        if container_info is None: raise ValueError(f"Unsupported container '{container}'.")
+        if codec_info is None: raise ValueError(f"Unsupported video codec '{video_codec}'.")
+        if codec_key not in container_info["allowed_codecs"]:
+            allowed = ", ".join(sorted(container_info["allowed_codecs"]))
+            raise ValueError(f"Codec '{codec_key}' is not supported in '{container_key}'. Allowed: {allowed}.")
 
         # --- Sequence Numbering ---
         seq = _next_seq_number(final_video_dir, base_prefix, filename_delimiter, number_padding)
@@ -730,165 +708,75 @@ class SaveVideo:
 
         # --- Main Save Logic ---
         video_path_str = ""
-        frames_saved_path = None
 
-        if save_video:
-            extension = container_info.get("extension", "mp4")
-            out_path = self._normalize_path(final_video_dir / f"{stem}.{extension}")
+        extension = container_info.get("extension", "mp4")
+        out_path = self._normalize_path(final_video_dir / f"{stem}.{extension}")
 
-            # Final validation before creating the subprocess
-            self._validate_path_is_allowed(out_path)
+        # Final validation before creating the subprocess
+        self._validate_path_is_allowed(out_path)
 
-            tmp_wav = None
-            audio_path = None
-            acodec = container_info.get("audio_codec")
-            if audio is not None and acodec:
-                try:
-                    tmp_wav = _audio_to_wav_path(audio)
-                    audio_path = tmp_wav
-                except (ValueError, TypeError) as exc:
-                    print(f"[SaveVideo] Warning: could not decode audio input, saving without audio. Reason: {exc}")
-
-            total_frames = len(frames)
-            ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
-            if len(frames) == 1 and audio_path and loop_still_to_audio:
-                dur = _probe_audio_duration(ffmpeg_exe, audio_path)
-                if dur and dur > 0:
-                    total_frames = int(math.ceil(dur * fps))
-                    if show_progress: print(f"[SaveVideo] Looping single frame for {dur:.2f}s -> {total_frames} frames @ {fps} fps")
-                elif show_progress: print("[SaveVideo] Could not read audio duration; using single frame only.")
-
-            h, w, _ = frames[0].shape
-            cmd = _build_cmd(ffmpeg_exe, w, h, fps, out_path, codec_info, container_info, acodec, audio_path, crf, preset)
-
-            if show_progress:
-                print(f"[SaveVideo] Output base: {final_video_dir.resolve()}")
-                print(f"[SaveVideo] Container: {container_key} | Codec: {codec_key} -> {out_path}")
-
-            proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE, text=False)
+        tmp_wav = None
+        audio_path = None
+        acodec = container_info.get("audio_codec")
+        if audio is not None and acodec:
             try:
-                if len(frames) == 1 and total_frames > 1:
-                    buf = frames[0].tobytes()
-                    step = max(1, total_frames // 50)
-                    for i in range(total_frames):
-                        proc.stdin.write(buf)
-                        if show_progress and (i + 1) % step == 0: print(f"[SaveVideo] {i+1}/{total_frames} ({(100 * (i + 1) / total_frames):5.1f}%)")
-                else:
-                    total = len(frames)
-                    step = max(1, total // 50)
-                    for i, f in enumerate(frames, 1):
-                        proc.stdin.write(f.tobytes())
-                        if show_progress and (i % step == 0): print(f"[SaveVideo] {i}/{total} ({(100 * i / total):5.1f}%)")
-            finally:
-                if proc.stdin: proc.stdin.close()
-                stderr_bytes = proc.stderr.read() if proc.stderr else b""
-                proc.stderr.close() if proc.stderr else None
-                ret = proc.wait()
+                tmp_wav = _audio_to_wav_path(audio)
+                audio_path = tmp_wav
+            except (ValueError, TypeError) as exc:
+                print(f"[SaveVideo] Warning: could not decode audio input, saving without audio. Reason: {exc}")
 
-            if tmp_wav:
-                try:
-                    os.unlink(tmp_wav)
-                except Exception:
-                    pass
+        total_frames = len(frames)
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+        if len(frames) == 1 and audio_path and loop_still_to_audio:
+            dur = _probe_audio_duration(ffmpeg_exe, audio_path)
+            if dur and dur > 0:
+                total_frames = int(math.ceil(dur * fps))
+                if show_progress: print(f"[SaveVideo] Looping single frame for {dur:.2f}s -> {total_frames} frames @ {fps} fps")
+            elif show_progress: print("[SaveVideo] Could not read audio duration; using single frame only.")
 
+        h, w, _ = frames[0].shape
+        cmd = _build_cmd(ffmpeg_exe, w, h, fps, out_path, codec_info, container_info, acodec, audio_path, crf, preset)
 
-            out_exists = out_path.exists() and out_path.stat().st_size > 0
-            if ret != 0 or not out_exists:
-                stderr_text = stderr_bytes.decode("utf-8", errors="ignore")
-                raise RuntimeError(f"FFmpeg failed (code {ret}).\nCommand: {' '.join(cmd)}\nStderr:\n{stderr_text.strip()}")
+        if show_progress:
+            print(f"[SaveVideo] Output base: {final_video_dir.resolve()}")
+            print(f"[SaveVideo] Container: {container_key} | Codec: {codec_key} -> {out_path}")
 
-            video_path_str = str(out_path.resolve())
-            if show_progress: print(f"[SaveVideo] Done: {video_path_str} ({out_path.stat().st_size} bytes)")
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE, text=False)
+        try:
+            if len(frames) == 1 and total_frames > 1:
+                buf = frames[0].tobytes()
+                step = max(1, total_frames // 50)
+                for i in range(total_frames):
+                    proc.stdin.write(buf)
+                    if show_progress and (i + 1) % step == 0: print(f"[SaveVideo] {i+1}/{total_frames} ({(100 * (i + 1) / total_frames):5.1f}%)")
+            else:
+                total = len(frames)
+                step = max(1, total // 50)
+                for i, f in enumerate(frames, 1):
+                    proc.stdin.write(f.tobytes())
+                    if show_progress and (i % step == 0): print(f"[SaveVideo] {i}/{total} ({(100 * i / total):5.1f}%)")
+        finally:
+            if proc.stdin: proc.stdin.close()
+            stderr_bytes = proc.stderr.read() if proc.stderr else b""
+            proc.stderr.close() if proc.stderr else None
+            ret = proc.wait()
 
-        # --- Frame Saving Logic ---
-        def _parse_frame_selection(spec: str, total: int) -> List[int]:
-            s = (spec or "").strip()
-            if not s: return []
-            if s == "-1": return list(range(total))
-            if s == "-2": return [max(0, total - 1)] if total > 0 else []
+        if tmp_wav:
             try:
-                parts = [x.strip() for x in s.split(',') if x.strip()]
-                idxs: List[int] = []
-                for p in parts:
-                    v = int(p)
-                    if v < 0:
-                        if v == -1: return list(range(total))
-                        if v == -2 and total > 0: idxs.append(total - 1)
-                    elif v < total:
-                        idxs.append(v)
-                return sorted(set(idxs))
+                os.unlink(tmp_wav)
             except Exception:
-                return []
+                pass
 
-        frames_dir_effective = self._expand_path_templates(frames_dir or "", context).strip()
-        if save_frames and not frames_dir_effective:
-            frames_dir_effective = "frames"
+        out_exists = out_path.exists() and out_path.stat().st_size > 0
+        if ret != 0 or not out_exists:
+            stderr_text = stderr_bytes.decode("utf-8", errors="ignore")
+            raise RuntimeError(f"FFmpeg failed (code {ret}).\nCommand: {' '.join(cmd)}\nStderr:\n{stderr_text.strip()}")
 
-        if save_frames and frames_dir_effective:
-            idxs = _parse_frame_selection(frames_select, len(frames))
-            if idxs:
-                frames_path = Path(frames_dir_effective).expanduser()
-                if frames_path.is_absolute():
-                    target_folder = self._normalize_path(frames_path)
-                else:
-                    target_folder = self._normalize_path(final_video_dir / frames_path)
-
-                target_folder.mkdir(parents=True, exist_ok=True)
-                frames_saved_path = target_folder
-
-                if show_progress: print(f"[SaveVideo] Saving frames -> {target_folder} | select='{frames_select}' -> {len(idxs)} frames")
-
-                try:
-                    import imageio.v2 as imageio
-                except Exception:
-                    imageio = None
-
-                if imageio:
-                    for idx in idxs:
-                        a = frames[idx]
-                        fname = f"{stem}_frame_{idx:04d}.png"
-                        frame_path = target_folder / fname
-                        self._validate_path_is_allowed(frame_path)
-                        try:
-                            imageio.imwrite(str(frame_path), a)
-                        except Exception:
-                            pass
+        video_path_str = str(out_path.resolve())
+        if show_progress: print(f"[SaveVideo] Done: {video_path_str} ({out_path.stat().st_size} bytes)")
 
         # --- UI Output ---
-        abs_path = video_path_str or (str(frames_saved_path.resolve()) if frames_saved_path else str(final_video_dir.resolve()))
+        abs_path = video_path_str or str(final_video_dir.resolve())
         ui = {"text": abs_path}
 
-        ui_seq_images = []
-        if show_preview:
-            try:
-                import imageio.v2 as imageio
-            except Exception:
-                imageio = None
-
-            if imageio and frames and preview_max_frames > 0:
-                try:
-                    from folder_paths import get_temp_directory
-                    seq_root = Path(get_temp_directory())
-                except Exception:
-                    seq_root = final_video_dir
-
-                step = max(1, int(preview_step))
-                idxs = list(range(0, len(frames), step))[:preview_max_frames]
-                if len(frames) == 1: idxs = [0]
-
-                for i, idx in enumerate(idxs):
-                    a = frames[idx]
-                    fname = f"{stem}_seq_{i:04d}.png"
-                    try:
-                        imageio.imwrite(str(seq_root / fname), a)
-                        ui_seq_images.append({"filename": fname, "subfolder": "", "type": "temp"})
-                    except Exception:
-                        continue
-
-        if ui_seq_images:
-            ui["images"] = ui_seq_images
-
         return {"ui": ui, "result": (images, abs_path,)}
-
-
-
