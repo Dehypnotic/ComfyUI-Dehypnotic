@@ -1,4 +1,4 @@
-#### Warning: This is my only repository now, so delete any old folders (comfyui-aspect-ratio-advanced, comfyui-numbered-text, comfyui-range-to-string, or comfyui-dehypnotic-save-nodes) you may have in ComfyUI\custom_nodes to avoid conflicts. 
+#### Important: This is my only repository now, so delete any old folders (comfyui-aspect-ratio-advanced, comfyui-numbered-text, comfyui-range-to-string, or comfyui-dehypnotic-save-nodes) you may have in ComfyUI\custom_nodes to avoid conflicts. 
 
 # ComfyUI-Dehypnotic Custom Nodes
 
