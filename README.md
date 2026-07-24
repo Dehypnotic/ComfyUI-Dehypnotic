@@ -1,3 +1,5 @@
+### This is my only repository now, so delete any old folders you may have in ComfyUI\custom_nodes to avoid conflicts. 
+
 # ComfyUI-Dehypnotic Custom Nodes
 
 A suite of feature-rich, high-performance custom nodes for [ComfyUI](https://github.com/comfyanonymous/ComfyUI). This repository provides nodes for image, video, audio saving, dynamic aspect ratio calculation, wireless data rerouting, and text generation.
