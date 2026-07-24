@@ -219,7 +219,7 @@ An advanced multi-format image saving node featuring sequence numbering, date-ba
 
 ---
 
-### 🧘 Save Video & Frames (Dehypnotic)
+### 🧘 Save Video (Dehypnotic)
 **Class Name**: `SaveVideoDehypnotic`  
 **Category**: `Dehypnotic/💾 IO`
 
