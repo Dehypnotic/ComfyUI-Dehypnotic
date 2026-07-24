@@ -61,9 +61,16 @@ app.registerExtension({
   async nodeCreated(node) {
     if (node.comfyClass !== NODE_TYPE) return;
 
-    // =========================================================
-    // 1. Move number_padding, number_start, loop_still_to_audio, show_progress to Properties panel
-    // =========================================================
+    // Enforce wider minimum node width (e.g., 310px)
+    const MIN_WIDTH = 310;
+    const origComputeSize = node.computeSize;
+    node.computeSize = function (out) {
+      const size = origComputeSize ? origComputeSize.apply(this, arguments) : [MIN_WIDTH, 100];
+      size[0] = Math.max(size[0], MIN_WIDTH);
+      return size;
+    };
+    node.size[0] = Math.max(node.size[0], MIN_WIDTH);
+
     hidePropertyWidgets(node);
     setTimeout(() => hidePropertyWidgets(node), 50);
     setTimeout(() => hidePropertyWidgets(node), 150);
