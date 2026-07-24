@@ -33,6 +33,39 @@ app.registerExtension({
     });
     uploadWidget.serialize = false;
 
+    // Custom styling to match VHS "Show Preview" button (dark background, green border/text)
+    uploadWidget.draw = function(ctx, node, widget_width, y, widget_height) {
+        const margin = 10;
+        const color = "#27b376"; // Teal-green color
+
+        // Background and border
+        ctx.fillStyle = "#1e1e1e";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        const rectY = y;
+        const rectH = widget_height - 2;
+        const radius = 3;
+        
+        ctx.moveTo(margin + radius, rectY);
+        ctx.lineTo(widget_width - margin - radius, rectY);
+        ctx.quadraticCurveTo(widget_width - margin, rectY, widget_width - margin, rectY + radius);
+        ctx.lineTo(widget_width - margin, rectY + rectH - radius);
+        ctx.quadraticCurveTo(widget_width - margin, rectY + rectH, widget_width - margin - radius, rectY + rectH);
+        ctx.lineTo(margin + radius, rectY + rectH);
+        ctx.quadraticCurveTo(margin, rectY + rectH, margin, rectY + rectH - radius);
+        ctx.lineTo(margin, rectY + radius);
+        ctx.quadraticCurveTo(margin, rectY, margin + radius, rectY);
+        ctx.fill();
+        ctx.stroke();
+
+        // Text
+        ctx.fillStyle = color;
+        ctx.textAlign = "center";
+        ctx.font = "bold 12px Arial";
+        ctx.fillText("⬆ UPLOAD VIDEO", widget_width * 0.5, y + rectH * 0.7);
+    };
+
     const fileInput = document.createElement("input");
     Object.assign(fileInput, {
         type: "file",
