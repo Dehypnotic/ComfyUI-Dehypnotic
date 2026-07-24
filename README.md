@@ -15,6 +15,7 @@ A suite of feature-rich, high-performance custom nodes for [ComfyUI](https://git
   - [🧘 RangeToString (Dehypnotic)](#-rangetostring-dehypnotic)
   - [🧘 Save Audio (Dehypnotic)](#-save-audio-dehypnotic)
   - [🧘 Save Images (Dehypnotic)](#-save-images-dehypnotic)
+  - [🧘 Load Video (Dehypnotic)](#-load-video-dehypnotic)
   - [🧘 Save Video & Frames (Dehypnotic)](#-save-video--frames-dehypnotic)
 - [Security and External Save Paths](#security-and-external-save-paths-comfyui-manager-compliant)
 - [Installation](#installation)
@@ -216,6 +217,28 @@ An advanced multi-format image saving node featuring sequence numbering, date-ba
     <th valign=top><img width="246" height="302" alt="image" src="https://github.com/user-attachments/assets/2e95f903-7b48-4e8e-b025-9796c587b2df" /></th>
   </tr>
 </table>
+
+---
+
+### 🧘 Load Video (Dehypnotic)
+**Class Name**: `LoadVideoDehypnotic`  
+**Category**: `Dehypnotic/IO`
+
+A streamlined video loading node with an interactive frontend, built-in file uploading, and drag-and-drop support. It extracts frames and audio from video files seamlessly.
+
+#### Key Features:
+- **Built-in Upload & Drag-and-Drop**: Easily upload videos directly into ComfyUI's input folder using the "Upload video" button, or simply drag and drop a video file onto the node.
+- **Dynamic Video Player**: Features a compact, native video player at the bottom of the node to preview the selected video (plays on mouseover).
+- **Format Support**: Automatically lists known video formats (`mp4`, `mkv`, `webm`, `avi`, `mov`, `gif`) from your input directory, sorted by newest first.
+- **Frame & Audio Extraction**: Outputs high-quality `IMAGE` tensors (via OpenCV) and extracts audio tracks natively into ComfyUI's standard `AUDIO` format (via FFmpeg).
+
+#### Inputs & Outputs:
+| Type | Name | Default / Options | Description |
+| :--- | :--- | :--- | :--- |
+| **Required Input** | `video` | *Dynamic dropdown* | Select a video file from the ComfyUI input folder. |
+| **Output** | `images` | `IMAGE` | Extracted video frame sequence. |
+| **Output** | `audio` | `AUDIO` | Extracted audio track (if present). |
+| **Output** | `fps` | `FLOAT` | Video framerate. |
 
 ---
 

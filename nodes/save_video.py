@@ -241,7 +241,7 @@ class SaveVideo:
                 "number_start": ("INT", {"default": 1, "min": 0, "max": 1_000_000, "tooltip": "Starting value for the sequence number.", "display": "property"}),
                 "container": (tuple(CONTAINER_OPTIONS.keys()), {"default": "mp4", "tooltip": "Container format (mp4, mkv, webm, mov)."}),
                 "video_codec": (tuple(VIDEO_CODEC_OPTIONS.keys()), {"default": "h264", "tooltip": "Video codec to use for encoding."}),
-                "fps": ("INT", {"default": 24, "min": 1, "max": 240, "tooltip": "Frames per second (CFR)."}),
+                "fps": ("FLOAT", {"default": 24.0, "min": 1.0, "max": 240.0, "step": 1.0, "tooltip": "Frames per second (CFR)."}),
                 "crf": ("INT", {"default": 23, "min": 0, "max": 51, "tooltip": "Quality (lower = better, larger files). Typical 18-28 for H.264."}),
                 "preset": (VALID_PRESETS, {"default": "fast", "tooltip": "Encoder speed versus quality (ultrafast ... veryslow)."}),
             },
@@ -428,6 +428,8 @@ class SaveVideo:
         loop_still_to_audio=True,
         show_progress=True,
     ):
+        fps = int(round(float(fps)))
+        
         if imageio_ffmpeg is None:
             msg = (
                 "Save Video node requires 'imageio' and 'imageio-ffmpeg'. "
