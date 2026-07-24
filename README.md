@@ -46,6 +46,15 @@ A flexible aspect ratio and resolution generator node with interactive frontend 
 | **Output** | `latent` | `LATENT` | Encoded latent (if VAE input and encoding are enabled). |
 | **Output** | `scaled_image` | `IMAGE` | Resized reference image matching the target dimensions. |
 
+<table cellspacing="0" cellpadding="0" style="width:100%">
+  <tr>
+    <th><img width="310" height="654" alt="image" src="https://github.com/user-attachments/assets/54c66c6f-fc14-4c14-a4ee-39a8eaacc2b7" /></th>
+    <th><img width="309" height="659" alt="image" src="https://github.com/user-attachments/assets/b10afae3-a249-42e8-8644-6652f4bd4211" /></th>
+    <th><img width="316" height="659" alt="image" src="https://github.com/user-attachments/assets/746cc7ff-3a55-4fe5-b4e5-89ea7c33729c" /></th>
+    <th><img width="312" height="652" alt="image" src="https://github.com/user-attachments/assets/f3b08a28-c996-47b8-ac3e-a5aa1eb66d44" /></th>
+  </tr>
+</table>
+
 ---
 
 ### 🧘 Set Dehypnotic & Get Dehypnotic
@@ -62,6 +71,8 @@ Wireless routing nodes designed to keep your ComfyUI node graphs organized, read
 #### How to Use:
 1. Attach any output to a `Set Dehypnotic` node and enter a variable name.
 2. Place a `Get Dehypnotic` node anywhere in your graph, select the variable name from the dropdown, and connect its output to your target node.
+
+<img width="517" height="112" alt="image" src="https://github.com/user-attachments/assets/341d46ed-7c25-4fd8-8466-311d476ce4d4" />
 
 ---
 
@@ -83,6 +94,8 @@ A prompt management and text block organizer node. Allows writing multi-line tex
 | **Required Input** | `text` | `STRING` (Multiline) | Multi-line structured text containing numbered/checked entries. |
 | **Required Input** | `separator` | `STRING` | Delimiter string used to join active blocks (supports `\n`, `\t`). |
 | **Output** | `text` | `STRING` | Combined text of all active (checked) items. |
+
+<img width="717" height="461" alt="image" src="https://github.com/user-attachments/assets/da8df30a-cd17-479b-923f-41c1181634f0" />
 
 ---
 
@@ -106,6 +119,9 @@ Generates a formatted string representing a numerical sequence. Useful for batch
 | **Required Input** | `separator` | `STRING` | `,` | Delimiter string inserted between numbers. |
 | **Required Input** | `mode` | `["inclusive", "exclusive"]` | `inclusive` | Whether to include the `end` value in output. |
 | **Output** | `STRING` | `STRING` | - | Generated sequence string (e.g. `"0,1,2,3"`). |
+
+<img width="377" height="220" alt="image" src="https://github.com/user-attachments/assets/e3c2dd40-d556-4999-8510-7ad6a63117cb" />
+
 
 ---
 
@@ -147,6 +163,15 @@ A specialized, multi-format audio output node with dynamic UI and built-in playb
 | **Output** | `audio` | `AUDIO` | Passthrough of input audio data. |
 | **Output** | `format_info` | `STRING` | Detailed summary of encoding parameters used. |
 
+<table cellspacing="0" cellpadding="0" style="width:100%">
+  <tr valign=top>
+    <th><img width="333" height="403" alt="image" src="https://github.com/user-attachments/assets/cb8c3c75-a4b2-4bdb-94ec-9ee614a37d6a" /></th>
+    <th><img width="331" height="404" alt="image" src="https://github.com/user-attachments/assets/292e4db5-bcf5-4c67-822c-9a79e7979a56" /></th>
+    <th><img width="330" height="428" alt="image" src="https://github.com/user-attachments/assets/3c6215d5-a870-4638-a347-bb80109faf65" /></th>
+    <th><img width="334" height="426" alt="image" src="https://github.com/user-attachments/assets/b2e149a5-4b91-476a-933d-f1610dbedac6" /></th>
+  </tr>
+</table>
+
 ---
 
 ### 🧘 Save Images (Dehypnotic)
@@ -185,6 +210,13 @@ An advanced multi-format image saving node featuring sequence numbering, date-ba
 | **Output** | `images` | `IMAGE` | Passthrough input images tensor. |
 | **Output** | `saved_path` | `STRING` | Line-separated paths of all saved files on disk. |
 
+<table style="width:100%">
+  <tr>
+    <th><img width="252" height="581" alt="image" src="https://github.com/user-attachments/assets/c7000281-861b-4583-8f3d-7bc2c989ca8c" /></th>
+    <th valign=top><img width="246" height="302" alt="image" src="https://github.com/user-attachments/assets/2e95f903-7b48-4e8e-b025-9796c587b2df" /></th>
+  </tr>
+</table>
+
 ---
 
 ### 🧘 Save Video & Frames (Dehypnotic)
@@ -218,6 +250,8 @@ A comprehensive video renderer and frame exporter node leveraging bundled `image
 | **Optional Input** | `frames_select` | `"-2"` | Frame selection criteria (`-2` last, `-1` all, `0` first, or list). |
 | **Output** | `images` | `IMAGE` | Passthrough image batch (or preview sequence). |
 | **Output** | `video_path` | `STRING` | File path of the saved output video. |
+
+<img width="236" height="628" alt="image" src="https://github.com/user-attachments/assets/33206e06-4c83-4d38-b85a-6e348f856974" />
 
 ---
 
