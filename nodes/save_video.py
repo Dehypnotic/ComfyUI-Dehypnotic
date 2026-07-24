@@ -777,6 +777,32 @@ class SaveVideo:
 
         # --- UI Output ---
         abs_path = video_path_str or str(final_video_dir.resolve())
-        ui = {"text": abs_path}
+
+        # Build preview info for the JS frontend (same structure as VHS_VideoCombine)
+        extension = out_path.suffix.lstrip(".")
+        try:
+            base_output = self._base_output_dir()
+            rel = out_path.resolve().relative_to(base_output.resolve())
+            preview_subfolder = str(rel.parent).replace("\\", "/")
+            if preview_subfolder == ".":
+                preview_subfolder = ""
+            preview_filename = out_path.name
+            preview_type = "output"
+        except ValueError:
+            # Path is outside ComfyUI output dir — serve as absolute path reference only
+            preview_subfolder = ""
+            preview_filename = out_path.name
+            preview_type = "output"
+
+        ui = {
+            "text": abs_path,
+            "video_preview": [{
+                "filename": preview_filename,
+                "subfolder": preview_subfolder,
+                "type": preview_type,
+                "format": f"video/{extension}",
+            }],
+        }
 
         return {"ui": ui, "result": (images, abs_path,)}
+
