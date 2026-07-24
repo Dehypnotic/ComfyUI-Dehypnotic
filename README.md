@@ -197,7 +197,6 @@ A comprehensive video renderer and frame exporter node leveraging bundled `image
 - **Multiple Containers & Professional Codecs**:
   - Containers: `mp4`, `mkv`, `webm`, `mov`.
   - Codecs: H.264 (`libx264`), H.265/HEVC (`libx265`), VP9 (`libvpx-vp9`), AV1 (`libaom-av1`), ProRes 422 HQ (`prores_ks`), DNxHR HQ (`dnxhr_hq`).
-- **Flexible Modes (`save_mode`)**: Choose to export `video`, individual `frames`, or `video & frames` simultaneously.
 - **Audio Integration & Single-Frame Looping**: Attach mono or stereo `AUDIO`. If a single image frame and an audio track are provided, the node automatically loops the frame for the full duration of the audio.
 - **Frame Extraction & Selection**: Extract specific frames (e.g. first frame `0`, last frame `-2`, all frames `-1`, or explicit lists like `0,5,10`) to a subfolder during video export.
 - **Quality & Performance Tuning**: CRF (Constant Rate Factor) quality control, encoder speed presets (`ultrafast` to `veryslow`), and optional frame preview rendering in the node output.
