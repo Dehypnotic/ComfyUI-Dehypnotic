@@ -86,12 +86,12 @@ function serializeItems(items) {
 // Userdata API helpers  (ComfyUI /userdata endpoints)
 // ---------------------------------------------------------------------------
 
-const TEXT_DIR = "Dehypnotic/text";
+const TEXT_DIR = "Dehypnotic/numbered_text";
 
 /**
- * List JSON files in the Dehypnotic/text userdata directory.
+ * List JSON files in the Dehypnotic/numbered_text userdata directory.
  * Returns an array of { name, path, modified } objects sorted newest first,
- * where `path` is the full relative path from the user root (e.g. "Dehypnotic/text/foo.json")
+ * where `path` is the full relative path from the user root (e.g. "Dehypnotic/numbered_text/foo.json")
  * and `name` is just the base filename without extension.
  * Returns an empty array on error.
  */
@@ -129,7 +129,7 @@ async function listTextFiles() {
 }
 
 /**
- * Save items to a JSON file under Dehypnotic/text/<filename>.json
+ * Save items to a JSON file under Dehypnotic/numbered_text/<filename>.json
  * Returns true on success, false on failure.
  * @param {string} filename – just the base name, e.g. "my_prompts" (no path, no extension)
  * @param {Array}  items    – array of { checked, text }
@@ -156,7 +156,7 @@ async function saveTextFile(filename, items, overwrite = true) {
 /**
  * Load a JSON file from /userdata/<path>.
  * Returns the parsed { version, items } object, or null on error.
- * @param {string} filePath – relative path as returned by the listing API, e.g. "Dehypnotic/text/foo.json"
+ * @param {string} filePath – relative path as returned by the listing API, e.g. "Dehypnotic/numbered_text/foo.json"
  */
 async function loadTextFile(filePath) {
     try {
@@ -507,7 +507,7 @@ app.registerExtension({
                 fileSelect.appendChild(placeholderOpt);
 
                 // Currently selected file path (set after save to enable direct-save)
-                let currentFilePath = "";   // e.g. "Dehypnotic/text/foo.json"
+                let currentFilePath = "";   // e.g. "Dehypnotic/numbered_text/foo.json"
                 let currentFileName = "";   // e.g. "foo" (without extension)
 
                 // Populate dropdown with JSON files from userdata
