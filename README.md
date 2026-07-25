@@ -81,13 +81,15 @@ Wireless routing nodes designed to keep your ComfyUI node graphs organized, read
 **Class Name**: `NumberedText` / `dehypnotic_NumberedText`  
 **Category**: `Dehypnotic/📝 Text Utils`
 
-A prompt management and text block organizer node. Allows writing multi-line text entries with interactive checkbox toggles to selectively combine prompts.
+A prompt management and text block organizer node. Allows writing multi-line text entries with interactive checkbox toggles to selectively combine prompts. Now features a robust preset saving system.
 
 #### Key Features:
 - **Interactive Numbered Blocks**: Create new numbered entries using `Enter`. Create multi-line sub-texts within the same item using `Shift + Enter`.
 - **Selective Output**: Toggle checkboxes (`[x]` / `[ ]`) next to numbered items. Only checked text items are combined and output.
+- **Preset Management**: Save and load your text lists as `.json` files directly from the UI. A dropdown picker lets you easily load, update, or delete saved files. Automatically creates and stores files under `ComfyUI/user/default/Dehypnotic/text/`.
 - **Custom Delimiters**: Joins active text blocks using any custom separator (e.g., `, `, `\n`, ` | `).
 - **Line Swapping**: Quick UI shortcuts to swap the content of any two numbered items.
+- **Quick Operations**: Dedicated buttons to "Check All", "Uncheck All", "Copy Checked" to clipboard, and "Delete Checked" lines.
 
 #### Inputs & Outputs:
 | Type | Name | Data Type | Description |
