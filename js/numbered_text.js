@@ -1034,13 +1034,24 @@ app.registerExtension({
                 const copyBtn = createButton("Copy Checked", () => {
                     const currentText = textWidget.value || "";
                     const items = parseSerializedText(currentText);
-                    const selectedTexts = items.filter(item => item.checked).map(item => item.text.trim()).filter(Boolean);
+                    const selectedTexts = items.filter(item => item.checked).map(item => item.text).filter(t => t !== "");
 
                     const separatorWidget = node.widgets.find(w => w.name === "separator");
                     const rawSeparator = separatorWidget ? separatorWidget.value : ", ";
                     const unescapedSeparator = unescapeString(rawSeparator);
 
-                    const textToCopy = selectedTexts.join(unescapedSeparator);
+                    let textToCopy = "";
+                    for (let i = 0; i < selectedTexts.length; i++) {
+                        if (i === 0) {
+                            textToCopy += selectedTexts[i];
+                        } else {
+                            if (textToCopy.endsWith("\n") || selectedTexts[i].startsWith("\n")) {
+                                textToCopy += selectedTexts[i];
+                            } else {
+                                textToCopy += unescapedSeparator + selectedTexts[i];
+                            }
+                        }
+                    }
 
                     copyBtn.textContent = "Copied!";
                     copyBtn.style.backgroundColor = "#2b5e2b";

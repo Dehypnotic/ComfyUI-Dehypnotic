@@ -51,9 +51,20 @@ def _unescape(s: str) -> str:
 
 def _get_joined_text(text: str, separator: str = "\n") -> str:
     blocks = _parse_numbered_blocks(text)
-    # Output only the checked blocks, stripped of whitespace
-    selected_blocks = [b.strip() for checked, b in blocks if checked and b.strip()]
-    return separator.join(selected_blocks)
+    # Output only the checked blocks, skipping empty strings but preserving spaces/newlines
+    selected_blocks = [b for checked, b in blocks if checked and b != ""]
+    
+    result = ""
+    for i, b in enumerate(selected_blocks):
+        if i == 0:
+            result += b
+        else:
+            if result.endswith("\n") or b.startswith("\n"):
+                result += b
+            else:
+                result += separator + b
+                
+    return result
 
 class NumberedText:
     DESCRIPTION = (
