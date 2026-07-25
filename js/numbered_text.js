@@ -1,5 +1,9 @@
 import { app } from "../../scripts/app.js";
 
+// ---------------------------------------------------------------------------
+// Serialization helpers
+// ---------------------------------------------------------------------------
+
 function parseSerializedText(text) {
     const cleanText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
@@ -78,6 +82,100 @@ function serializeItems(items) {
     }).join("\n");
 }
 
+// ---------------------------------------------------------------------------
+// Userdata API helpers  (ComfyUI /userdata endpoints)
+// ---------------------------------------------------------------------------
+
+const TEXT_DIR = "Dehypnotic/text";
+
+/**
+ * List JSON files in the Dehypnotic/text userdata directory.
+ * Returns an array of { name, path, modified } objects sorted newest first,
+ * where `path` is the full relative path from the user root (e.g. "Dehypnotic/text/foo.json")
+ * and `name` is just the base filename without extension.
+ * Returns an empty array on error.
+ */
+async function listTextFiles() {
+    try {
+        // NOTE: the dir param is relative to the user directory.
+        // full_info=true returns FileInfo objects where `path` is relative to the listed dir,
+        // and `modified` is in milliseconds.
+        const url = `/userdata?dir=${encodeURIComponent(TEXT_DIR)}&full_info=true&recurse=false`;
+        const resp = await fetch(url);
+        if (!resp.ok) {
+            if (resp.status === 404) return []; // directory doesn't exist yet
+            console.warn("[NumberedText] listTextFiles error:", resp.status, await resp.text());
+            return [];
+        }
+        const files = await resp.json();
+        // `files` is an array of FileInfo: { path (relative to listed dir), size, modified (ms), created (ms) }
+        // Filter to .json only
+        const jsonFiles = files
+            .filter(f => typeof f === "object" && f.path && f.path.toLowerCase().endsWith(".json"))
+            .map(f => ({
+                // Build the full path relative to user root so we can use it with /userdata/{file}
+                path: TEXT_DIR + "/" + f.path,
+                // Friendly display name: base filename without extension
+                name: f.path.replace(/\.json$/i, ""),
+                modified: f.modified || 0,
+            }));
+        // Sort newest first
+        jsonFiles.sort((a, b) => b.modified - a.modified);
+        return jsonFiles;
+    } catch (e) {
+        console.warn("[NumberedText] listTextFiles exception:", e);
+        return [];
+    }
+}
+
+/**
+ * Save items to a JSON file under Dehypnotic/text/<filename>.json
+ * Returns true on success, false on failure.
+ * @param {string} filename – just the base name, e.g. "my_prompts" (no path, no extension)
+ * @param {Array}  items    – array of { checked, text }
+ * @param {boolean} overwrite
+ */
+async function saveTextFile(filename, items, overwrite = true) {
+    const safeFilename = filename.replace(/[/\\:*?"<>|]/g, "_");
+    const filePath = `${TEXT_DIR}/${safeFilename}.json`;
+    const body = JSON.stringify({ version: 1, items }, null, 2);
+    const url = `/userdata/${encodeURIComponent(filePath)}?overwrite=${overwrite}`;
+    try {
+        const resp = await fetch(url, {
+            method: "POST",
+            body,
+            headers: { "Content-Type": "application/json" }
+        });
+        return resp.ok;
+    } catch (e) {
+        console.error("[NumberedText] saveTextFile exception:", e);
+        return false;
+    }
+}
+
+/**
+ * Load a JSON file from /userdata/<path>.
+ * Returns the parsed { version, items } object, or null on error.
+ * @param {string} filePath – relative path as returned by the listing API, e.g. "Dehypnotic/text/foo.json"
+ */
+async function loadTextFile(filePath) {
+    try {
+        const resp = await fetch(`/userdata/${encodeURIComponent(filePath)}`);
+        if (!resp.ok) {
+            console.warn("[NumberedText] loadTextFile error:", resp.status);
+            return null;
+        }
+        const data = await resp.json();
+        return data;
+    } catch (e) {
+        console.error("[NumberedText] loadTextFile exception:", e);
+        return null;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Render list
+// ---------------------------------------------------------------------------
 
 function renderList(container, textWidget, node) {
     // Clean up old resize observers to prevent memory leaks
@@ -297,6 +395,10 @@ function renderList(container, textWidget, node) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Extension registration
+// ---------------------------------------------------------------------------
+
 app.registerExtension({
     name: "dehypnotic.NumberedText",
     async nodeCreated(node) {
@@ -345,7 +447,213 @@ app.registerExtension({
                     hideInput();
                 };
 
-                // Create parent container (flexbox to hold list and buttons)
+                // ---------------------------------------------------------------
+                // File picker row  (load dropdown – displayed above the list)
+                // ---------------------------------------------------------------
+
+                const filePickerRow = document.createElement("div");
+                filePickerRow.style.display = "flex";
+                filePickerRow.style.flexDirection = "row";
+                filePickerRow.style.alignItems = "center";
+                filePickerRow.style.width = "100%";
+                filePickerRow.style.padding = "4px 6px";
+                filePickerRow.style.boxSizing = "border-box";
+                filePickerRow.style.gap = "5px";
+                filePickerRow.style.backgroundColor = "#1a1a1a";
+                filePickerRow.style.borderBottom = "1px solid #333";
+                filePickerRow.style.borderTopLeftRadius = "4px";
+                filePickerRow.style.borderTopRightRadius = "4px";
+
+                // "Load" button — acts as both label and trigger.
+                // Reads fileSelect.value at click time — works for any file, same or different.
+                const loadFileBtn = document.createElement("button");
+                loadFileBtn.textContent = "Load";
+                loadFileBtn.title = "Load selected file into list";
+                loadFileBtn.style.backgroundColor = "#27272a";
+                loadFileBtn.style.border = "1px solid #3f3f46";
+                loadFileBtn.style.borderRadius = "3px";
+                loadFileBtn.style.color = "#34d399";
+                loadFileBtn.style.padding = "2px 8px";
+                loadFileBtn.style.fontSize = "10px";
+                loadFileBtn.style.fontFamily = "sans-serif";
+                loadFileBtn.style.cursor = "pointer";
+                loadFileBtn.style.whiteSpace = "nowrap";
+                loadFileBtn.style.transition = "background 0.15s, border-color 0.15s";
+
+                loadFileBtn.addEventListener("mouseover", () => {
+                    loadFileBtn.style.backgroundColor = "rgba(16, 185, 129, 0.12)";
+                    loadFileBtn.style.borderColor = "#10b981";
+                });
+                loadFileBtn.addEventListener("mouseout", () => {
+                    loadFileBtn.style.backgroundColor = "#27272a";
+                    loadFileBtn.style.borderColor = "#3f3f46";
+                });
+
+                const fileSelect = document.createElement("select");
+                fileSelect.style.flex = "1";
+                fileSelect.style.backgroundColor = "#2d2d2d";
+                fileSelect.style.border = "1px solid #555";
+                fileSelect.style.borderRadius = "3px";
+                fileSelect.style.color = "#ccc";
+                fileSelect.style.fontSize = "10px";
+                fileSelect.style.padding = "2px 4px";
+                fileSelect.style.cursor = "pointer";
+                fileSelect.style.outline = "none";
+
+                // Placeholder option
+                const placeholderOpt = document.createElement("option");
+                placeholderOpt.value = "";
+                placeholderOpt.textContent = "— New file —";
+                fileSelect.appendChild(placeholderOpt);
+
+                // Currently selected file path (set after save to enable direct-save)
+                let currentFilePath = "";   // e.g. "Dehypnotic/text/foo.json"
+                let currentFileName = "";   // e.g. "foo" (without extension)
+
+                // Populate dropdown with JSON files from userdata
+                async function refreshFileList(selectValue) {
+                    const files = await listTextFiles();
+                    while (fileSelect.options.length > 1) {
+                        fileSelect.remove(1);
+                    }
+                    for (const f of files) {
+                        const opt = document.createElement("option");
+                        opt.value = f.path;
+                        opt.textContent = f.name;
+                        fileSelect.appendChild(opt);
+                    }
+                    if (selectValue) {
+                        fileSelect.value = selectValue;
+                    }
+                }
+
+                // Delete-file button — declared before loadSelectedFile to avoid TDZ.
+                const deleteFileBtn = document.createElement("button");
+
+                // ---------------------------------------------------------------
+                // Load logic — only ever called from the Load button click.
+                // The dropdown change event does NOT trigger any loading.
+                // ---------------------------------------------------------------
+                async function loadSelectedFile(selected) {
+                    if (!selected) return;
+
+                    const baseName = selected.replace(/^.*[\/\\]/, "").replace(/\.json$/i, "");
+
+                    const data = await loadTextFile(selected);
+                    if (!data || !Array.isArray(data.items)) {
+                        alert("Failed to load file or invalid format.");
+                        return;
+                    }
+
+                    // Append from first free slot, or replace if list is empty/blank
+                    const existingItems = parseSerializedText(textWidget.value || "");
+                    const isEffectivelyEmpty =
+                        existingItems.length === 0 ||
+                        (existingItems.length === 1 && existingItems[0].text.trim() === "");
+
+                    const mergedItems = isEffectivelyEmpty
+                        ? data.items
+                        : [...existingItems, ...data.items];
+
+                    textWidget.value = serializeItems(mergedItems);
+                    renderList(listContainer, textWidget, node);
+
+                    // Remember for direct-save
+                    currentFilePath = selected;
+                    currentFileName = baseName;
+                    deleteFileBtn.disabled = false;
+                    deleteFileBtn.style.opacity = "1";
+                }
+
+                // Load button click — the one and only way to trigger loading.
+                loadFileBtn.addEventListener("click", async () => {
+                    await loadSelectedFile(fileSelect.value);
+                });
+
+                // Dropdown change enables/disables the Del button and updates current selection for Save
+                fileSelect.addEventListener("change", () => {
+                    const selected = fileSelect.value;
+                    deleteFileBtn.disabled = !selected;
+                    deleteFileBtn.style.opacity = selected ? "1" : "0.4";
+                    
+                    if (selected) {
+                        currentFilePath = selected;
+                        currentFileName = selected.replace(/^.*[\/\\]/, "").replace(/\.json$/i, "");
+                    } else {
+                        currentFilePath = "";
+                        currentFileName = "";
+                    }
+                });
+
+                // Delete-file button styling and event listeners
+                deleteFileBtn.textContent = "Del";
+                deleteFileBtn.title = "Delete selected file from disk";
+                deleteFileBtn.disabled = true;
+                deleteFileBtn.style.backgroundColor = "#3a1515";
+                deleteFileBtn.style.border = "1px solid #7f2020";
+                deleteFileBtn.style.borderRadius = "3px";
+                deleteFileBtn.style.color = "#e57373";
+                deleteFileBtn.style.padding = "2px 7px";
+                deleteFileBtn.style.fontSize = "10px";
+                deleteFileBtn.style.fontFamily = "sans-serif";
+                deleteFileBtn.style.cursor = "pointer";
+                deleteFileBtn.style.whiteSpace = "nowrap";
+                deleteFileBtn.style.opacity = "0.4";
+                deleteFileBtn.style.transition = "background 0.15s, border-color 0.15s, opacity 0.15s";
+
+                deleteFileBtn.addEventListener("mouseover", () => {
+                    if (!deleteFileBtn.disabled) {
+                        deleteFileBtn.style.backgroundColor = "#5a1f1f";
+                        deleteFileBtn.style.borderColor = "#c62828";
+                    }
+                });
+                deleteFileBtn.addEventListener("mouseout", () => {
+                    if (!deleteFileBtn.disabled) {
+                        deleteFileBtn.style.backgroundColor = "#3a1515";
+                        deleteFileBtn.style.borderColor = "#7f2020";
+                    }
+                });
+                deleteFileBtn.addEventListener("click", async () => {
+                    const pathToDelete = currentFilePath || fileSelect.value;
+                    if (!pathToDelete) return;
+                    const baseName = pathToDelete.replace(/^.*[\/\\]/, "").replace(/\.json$/i, "");
+                    if (!confirm(`Delete "${baseName}.json" from disk?\nThis cannot be undone.`)) return;
+
+                    try {
+                        const resp = await fetch(`/userdata/${encodeURIComponent(pathToDelete)}`, { method: "DELETE" });
+                        if (resp.ok || resp.status === 204) {
+                            currentFilePath = "";
+                            currentFileName = "";
+                            deleteFileBtn.disabled = true;
+                            deleteFileBtn.style.opacity = "0.4";
+                            await refreshFileList("");
+                        } else {
+                            alert(`Failed to delete file (HTTP ${resp.status}).`);
+                        }
+                    } catch (e) {
+                        console.error("[NumberedText] deleteFile exception:", e);
+                        alert("Failed to delete file.");
+                    }
+                });
+
+                filePickerRow.appendChild(loadFileBtn);
+                filePickerRow.appendChild(fileSelect);
+                filePickerRow.appendChild(deleteFileBtn);
+                // NOTE: saveBtn is appended to filePickerRow below, after it is declared.
+
+
+                // Auto-refresh every 30 seconds
+                const refreshInterval = setInterval(() => {
+                    refreshFileList(currentFilePath || fileSelect.value);
+                }, 30000);
+
+                // Initial populate (async, non-blocking)
+                refreshFileList("");
+
+                // ---------------------------------------------------------------
+                // Create parent container (flexbox to hold file picker, list, buttons)
+                // ---------------------------------------------------------------
+
                 const parentContainer = document.createElement("div");
                 parentContainer.style.display = "flex";
                 parentContainer.style.flexDirection = "column";
@@ -365,8 +673,6 @@ app.registerExtension({
                 listContainer.style.height = "300px";
                 listContainer.style.maxHeight = "300px";
                 listContainer.style.backgroundColor = "#151515";
-                listContainer.style.borderTopLeftRadius = "4px";
-                listContainer.style.borderTopRightRadius = "4px";
 
                 // Create horizontal button container
                 const buttonContainer = document.createElement("div");
@@ -650,6 +956,7 @@ app.registerExtension({
                 swapRow.appendChild(sepLabel);
                 swapRow.appendChild(sepInput);
 
+                parentContainer.appendChild(filePickerRow);
                 parentContainer.appendChild(listContainer);
                 parentContainer.appendChild(buttonContainer);
                 parentContainer.appendChild(swapRow);
@@ -660,15 +967,18 @@ app.registerExtension({
                     const width = node.size ? Math.max(350, node.size[0]) : 400;
                     const btnHeight = buttonContainer.clientHeight || 32;
                     const swapHeight = swapRow.clientHeight || 26;
-                    return [width, 305 + btnHeight + swapHeight + 10]; // Fixed list height (300px) + dynamic buttons height + swap row height + padding
+                    const filePickerHeight = filePickerRow.clientHeight || 28;
+                    return [width, filePickerHeight + 305 + btnHeight + swapHeight + 10];
                 };
 
                 // Set initial size of the node window
                 if (!node.size || node.size[1] < 100) {
-                    node.size = [400, 480];
+                    node.size = [400, 510];
                 }
 
+                // ---------------------------------------------------------------
                 // Button helper function
+                // ---------------------------------------------------------------
                 const createButton = (text, onClick) => {
                     const btn = document.createElement("button");
                     btn.textContent = text;
@@ -704,6 +1014,9 @@ app.registerExtension({
                     return str.replace(/\\n/g, "\n").replace(/\\t/g, "\t").replace(/\\r/g, "\r");
                 };
 
+                // ---------------------------------------------------------------
+                // Delete button  (was "Delete Checked")
+                // ---------------------------------------------------------------
                 const deleteBtn = createButton("Delete Checked", () => {
                     const currentText = textWidget.value || "";
                     let items = parseSerializedText(currentText);
@@ -715,6 +1028,9 @@ app.registerExtension({
                     renderList(listContainer, textWidget, node);
                 });
 
+                // ---------------------------------------------------------------
+                // Copy button  (was "Copy Checked")
+                // ---------------------------------------------------------------
                 const copyBtn = createButton("Copy Checked", () => {
                     const currentText = textWidget.value || "";
                     const items = parseSerializedText(currentText);
@@ -726,14 +1042,13 @@ app.registerExtension({
 
                     const textToCopy = selectedTexts.join(unescapedSeparator);
 
-                    const origText = "Copy Checked";
                     copyBtn.textContent = "Copied!";
                     copyBtn.style.backgroundColor = "#2b5e2b";
                     copyBtn.style.color = "#fff";
 
                     navigator.clipboard.writeText(textToCopy).then(() => {
                         setTimeout(() => {
-                            copyBtn.textContent = origText;
+                            copyBtn.textContent = "Copy Checked";
                             copyBtn.style.backgroundColor = "#27272a";
                             copyBtn.style.color = "#34d399";
                         }, 1500);
@@ -743,13 +1058,16 @@ app.registerExtension({
                         copyBtn.style.backgroundColor = "#962828";
                         copyBtn.style.color = "#fff";
                         setTimeout(() => {
-                            copyBtn.textContent = origText;
+                            copyBtn.textContent = "Copy Checked";
                             copyBtn.style.backgroundColor = "#27272a";
                             copyBtn.style.color = "#34d399";
                         }, 1500);
                     });
                 });
 
+                // ---------------------------------------------------------------
+                // Check All / Uncheck All
+                // ---------------------------------------------------------------
                 const checkAllBtn = createButton("Check All", () => {
                     const currentText = textWidget.value || "";
                     const items = parseSerializedText(currentText);
@@ -765,6 +1083,92 @@ app.registerExtension({
                     textWidget.value = serializeItems(items);
                     renderList(listContainer, textWidget, node);
                 });
+
+                // ---------------------------------------------------------------
+                // Save button
+                // ---------------------------------------------------------------
+                const saveBtn = createButton("Save", async () => {
+                    const items = parseSerializedText(textWidget.value || "");
+
+                    // If a file is already selected in the dropdown, save directly
+                    if (currentFilePath) {
+                        saveBtn.textContent = "Saving…";
+                        saveBtn.style.backgroundColor = "#1e3a5f";
+                        saveBtn.style.color = "#fff";
+
+                        const ok = await saveTextFile(currentFileName, items, true);
+
+                        if (ok) {
+                            saveBtn.textContent = "Saved!";
+                            saveBtn.style.backgroundColor = "#2b5e2b";
+                            await refreshFileList(currentFilePath);
+                        } else {
+                            saveBtn.textContent = "Error!";
+                            saveBtn.style.backgroundColor = "#962828";
+                        }
+                        setTimeout(() => {
+                            saveBtn.textContent = "Save";
+                            saveBtn.style.backgroundColor = "#27272a";
+                            saveBtn.style.color = "#34d399";
+                        }, 1500);
+                        return;
+                    }
+
+                    // No file selected – prompt for a filename
+                    let filename = prompt("Enter file name to save (without extension):");
+                    if (!filename) return;
+                    filename = filename.trim();
+                    if (!filename) return;
+
+                    // Sanitise the name slightly for display
+                    const safeBase = filename.replace(/[/\\:*?"<>|]/g, "_");
+                    const proposedPath = `${TEXT_DIR}/${safeBase}.json`;
+
+                    // Check if the file already exists (look in the dropdown options)
+                    const existingPaths = Array.from(fileSelect.options).map(o => o.value);
+                    const alreadyExists = existingPaths.includes(proposedPath);
+
+                    if (alreadyExists) {
+                        if (!confirm(`"${safeBase}.json" already exists. Overwrite?`)) return;
+                    }
+
+                    saveBtn.textContent = "Saving…";
+                    saveBtn.style.backgroundColor = "#1e3a5f";
+                    saveBtn.style.color = "#fff";
+
+                    const ok = await saveTextFile(safeBase, items, true);
+
+                    if (ok) {
+                        saveBtn.textContent = "Saved!";
+                        saveBtn.style.backgroundColor = "#2b5e2b";
+                        currentFilePath = proposedPath;
+                        currentFileName = safeBase;
+                        await refreshFileList(proposedPath);
+                        fileSelect.value = proposedPath;
+                    } else {
+                        saveBtn.textContent = "Error!";
+                        saveBtn.style.backgroundColor = "#962828";
+                    }
+                    setTimeout(() => {
+                        saveBtn.textContent = "Save";
+                        saveBtn.style.backgroundColor = "#27272a";
+                        saveBtn.style.color = "#34d399";
+                    }, 1500);
+                });
+
+                // Override mouseout for saveBtn to avoid green flash during feedback
+                saveBtn.addEventListener("mouseout", () => {
+                    if (!["Saved!", "Saving…", "Error!"].includes(saveBtn.textContent)) {
+                        saveBtn.style.backgroundColor = "#27272a";
+                        saveBtn.style.color = "#34d399";
+                    }
+                });
+
+                // Fix flex so Save doesn't stretch in the file-picker row
+                saveBtn.style.flex = "none";
+
+                // Insert Save into the file-picker row between Load and the dropdown
+                filePickerRow.insertBefore(saveBtn, fileSelect);
 
                 buttonContainer.appendChild(deleteBtn);
                 buttonContainer.appendChild(copyBtn);
@@ -786,6 +1190,13 @@ app.registerExtension({
                         node.setSize([Math.max(savedWidth, targetSize[0]), targetSize[1]]);
                         app.graph.setDirtyCanvas(true, true);
                     }, 50);
+                };
+
+                // Clean up interval when node is removed
+                const origOnRemoved = node.onRemoved;
+                node.onRemoved = function () {
+                    origOnRemoved?.apply(this, arguments);
+                    clearInterval(refreshInterval);
                 };
             }
         }
