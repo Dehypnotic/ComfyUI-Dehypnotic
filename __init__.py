@@ -6,6 +6,7 @@ from .nodes.save_images import SaveImages
 from .nodes.save_video import SaveVideo
 from .nodes.load_video import LoadVideo
 from .nodes.numbered_text import NumberedText
+from .nodes.text import TextDehypnotic
 
 NODE_CLASS_MAPPINGS = {
     "dehypnotic_RangeToString": RangeToString,
@@ -18,7 +19,8 @@ NODE_CLASS_MAPPINGS = {
     "SaveVideoDehypnotic": SaveVideo,
     "LoadVideoDehypnotic": LoadVideo,
     "NumberedText": NumberedText,
-    "dehypnotic_NumberedText": NumberedText
+    "dehypnotic_NumberedText": NumberedText,
+    "dehypnotic_Text": TextDehypnotic
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "dehypnotic_RangeToString": "🧘 RangeToString (Dehypnotic)",
@@ -31,7 +33,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "SaveVideoDehypnotic": "🧘 Save Video (Dehypnotic)",
     "LoadVideoDehypnotic": "🧘 Load Video (Dehypnotic)",
     "NumberedText": "NumberedText - DEPRECATED - REPLACE",
-    "dehypnotic_NumberedText": "🧘 NumberedText (Dehypnotic)"
+    "dehypnotic_NumberedText": "🧘 NumberedText (Dehypnotic)",
+    "dehypnotic_Text": "🧘 Text (Dehypnotic)"
 }
 WEB_DIRECTORY = "./js"
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]

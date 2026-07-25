@@ -102,6 +102,26 @@ A prompt management and text block organizer node. Allows writing multi-line tex
 
 ---
 
+### 🧘 Text (Dehypnotic)
+**Class Name**: `Text`  
+**Category**: `Dehypnotic/📝 Text Utils`
+
+A pure text block node equipped with a plain multi-line text editor, built-in file saving/loading (`.txt` files), and clipboard convenience buttons.
+
+#### Key Features:
+- **Plain Text Editor**: Just a classic text field without numbers or checkboxes.
+- **Preset Management**: Load and save plain text as `.txt` files directly from the UI dropdown. Automatically creates and stores files under `ComfyUI/user/default/Dehypnotic/text/`.
+- **Quick Operations**: Dedicated "Copy", "Paste", and "Clear" buttons at the bottom.
+- **Dynamic Text Replacing**: An optional `text_in` input (displayed as `text` on the node). If connected, the text provided from another node will instantly replace the text in this node upon execution.
+
+#### Inputs & Outputs:
+| Type | Name | Data Type | Description |
+| :--- | :--- | :--- | :--- |
+| **Optional Input** | `text_in` (UI: `text`) | `STRING` | Incoming text that replaces the node's current text. |
+| **Output** | `text` | `STRING` | The output plain text. |
+
+---
+
 ### 🧘 RangeToString (Dehypnotic)
 **Class Name**: `RangeToString` / `dehypnotic_RangeToString`  
 **Category**: `Dehypnotic/📝 Text Utils`
