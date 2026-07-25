@@ -98,7 +98,7 @@ A prompt management and text block organizer node. Allows writing multi-line tex
 | **Required Input** | `separator` | `STRING` | Delimiter string used to join active blocks (supports `\n`, `\t`). |
 | **Output** | `text` | `STRING` | Combined text of all active (checked) items. |
 
-<img width="797" height="442" alt="image" src="https://github.com/user-attachments/assets/5d048598-e0f0-4c71-be6e-411d0a1581e2" />
+<img width="1144" height="637" alt="image" src="https://github.com/user-attachments/assets/45369030-82d9-4159-9247-46a848cc2517" />
 
 ---
 
