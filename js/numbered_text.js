@@ -97,31 +97,14 @@ const TEXT_DIR = "Dehypnotic/numbered_text";
  */
 async function listTextFiles() {
     try {
-        // NOTE: the dir param is relative to the user directory.
-        // full_info=true returns FileInfo objects where `path` is relative to the listed dir,
-        // and `modified` is in milliseconds.
-        const url = `/userdata?dir=${encodeURIComponent(TEXT_DIR)}&full_info=true&recurse=false`;
-        const resp = await fetch(url);
-        if (!resp.ok) {
-            if (resp.status === 404) return []; // directory doesn't exist yet
-            console.warn("[NumberedText] listTextFiles error:", resp.status, await resp.text());
-            return [];
-        }
+        const resp = await fetch("/dehypnotic/user_text/list?type=numbered_text");
+        if (!resp.ok) return [];
         const files = await resp.json();
-        // `files` is an array of FileInfo: { path (relative to listed dir), size, modified (ms), created (ms) }
-        // Filter to .json only
-        const jsonFiles = files
-            .filter(f => typeof f === "object" && f.path && f.path.toLowerCase().endsWith(".json"))
-            .map(f => ({
-                // Build the full path relative to user root so we can use it with /userdata/{file}
-                path: TEXT_DIR + "/" + f.path,
-                // Friendly display name: base filename without extension
-                name: f.path.replace(/\.json$/i, ""),
-                modified: f.modified || 0,
-            }));
-        // Sort newest first
-        jsonFiles.sort((a, b) => b.modified - a.modified);
-        return jsonFiles;
+        return files.map(f => ({
+            path: f.path,
+            name: f.name,
+            modified: f.modified || 0,
+        }));
     } catch (e) {
         console.warn("[NumberedText] listTextFiles exception:", e);
         return [];
@@ -137,11 +120,9 @@ async function listTextFiles() {
  */
 async function saveTextFile(filename, items, overwrite = true) {
     const safeFilename = filename.replace(/[/\\:*?"<>|]/g, "_");
-    const filePath = `${TEXT_DIR}/${safeFilename}.json`;
-    const body = JSON.stringify({ version: 1, items }, null, 2);
-    const url = `/userdata/${encodeURIComponent(filePath)}?overwrite=${overwrite}`;
+    const body = JSON.stringify({ type: "numbered_text", filename: safeFilename, content: { version: 1, items }, overwrite });
     try {
-        const resp = await fetch(url, {
+        const resp = await fetch("/dehypnotic/user_text/save", {
             method: "POST",
             body,
             headers: { "Content-Type": "application/json" }
@@ -154,13 +135,13 @@ async function saveTextFile(filename, items, overwrite = true) {
 }
 
 /**
- * Load a JSON file from /userdata/<path>.
+ * Load a JSON file.
  * Returns the parsed { version, items } object, or null on error.
- * @param {string} filePath – relative path as returned by the listing API, e.g. "Dehypnotic/numbered_text/foo.json"
+ * @param {string} filePath – relative path/filename as returned by the listing API
  */
 async function loadTextFile(filePath) {
     try {
-        const resp = await fetch(`/userdata/${encodeURIComponent(filePath)}`, { cache: "no-store" });
+        const resp = await fetch(`/dehypnotic/user_text/load?type=numbered_text&filename=${encodeURIComponent(filePath)}`, { cache: "no-store" });
         if (!resp.ok) {
             console.warn("[NumberedText] loadTextFile error:", resp.status);
             return null;
@@ -620,7 +601,11 @@ app.registerExtension({
                     if (!confirm(`Delete "${baseName}.json" from disk?\nThis cannot be undone.`)) return;
 
                     try {
-                        const resp = await fetch(`/userdata/${encodeURIComponent(pathToDelete)}`, { method: "DELETE" });
+                        const resp = await fetch("/dehypnotic/user_text/delete", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ type: "numbered_text", filename: pathToDelete })
+                        });
                         if (resp.ok || resp.status === 204) {
                             currentFilePath = "";
                             currentFileName = "";
@@ -1133,7 +1118,7 @@ app.registerExtension({
 
                     // Sanitise the name slightly for display
                     const safeBase = filename.replace(/[/\\:*?"<>|]/g, "_");
-                    const proposedPath = `${TEXT_DIR}/${safeBase}.json`;
+                    const proposedPath = `${safeBase}.json`;
 
                     // Check if the file already exists (look in the dropdown options)
                     const existingPaths = Array.from(fileSelect.options).map(o => o.value);

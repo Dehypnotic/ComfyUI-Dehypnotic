@@ -88,7 +88,7 @@ A prompt management and text block organizer node. Allows writing multi-line tex
 #### Key Features:
 - **Interactive Numbered Blocks**: Create new numbered entries using `Enter`. Create multi-line sub-texts within the same item using `Shift + Enter`.
 - **Selective Output**: Toggle checkboxes (`[x]` / `[ ]`) next to numbered items. Only checked text items are combined and output.
-- **Preset Management**: Save and load your text lists as `.json` files directly from the UI. A dropdown picker lets you easily load, update, or delete saved files. Automatically creates and stores files under `ComfyUI/user/default/Dehypnotic/numbered_text/`.
+- **Preset Management**: Save and load your text lists as `.json` files directly from the UI. A dropdown picker lets you easily load, update, or delete saved files. Automatically creates and stores files under `ComfyUI/user/Dehypnotic/numbered_text/`.
 - **Custom Delimiters**: Joins active text blocks using any custom separator (e.g., `, `, `\n`, ` | `).
 - **Line Swapping**: Quick UI shortcuts to swap the content of any two numbered items.
 - **Quick Operations**: Dedicated buttons to "Check All", "Uncheck All", "Copy Checked" to clipboard, and "Delete Checked" lines.
@@ -112,7 +112,7 @@ A pure text block node equipped with a plain multi-line text editor, built-in fi
 
 #### Key Features:
 - **Plain Text Editor**: Just a classic text field without numbers or checkboxes.
-- **Preset Management**: Load and save plain text as `.txt` files directly from the UI dropdown. Automatically creates and stores files under `ComfyUI/user/default/Dehypnotic/text/`.
+- **Preset Management**: Load and save plain text as `.txt` files directly from the UI dropdown. Automatically creates and stores files under `ComfyUI/user/Dehypnotic/text/`.
 - **Quick Operations**: Dedicated "Copy", "Paste", and "Clear" buttons at the bottom.
 - **Dynamic Text Replacing**: An optional `text_in` input (displayed as `text` on the node). If connected, the text provided from another node will instantly replace the text in this node upon execution.
 

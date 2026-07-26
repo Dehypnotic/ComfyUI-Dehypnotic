@@ -4,23 +4,14 @@ const TEXT_DIR = "Dehypnotic/text";
 
 async function listTextFiles() {
     try {
-        const url = `/userdata?dir=${encodeURIComponent(TEXT_DIR)}&full_info=true&recurse=false`;
-        const resp = await fetch(url);
-        if (!resp.ok) {
-            if (resp.status === 404) return [];
-            console.warn("[Text] listTextFiles error:", resp.status);
-            return [];
-        }
+        const resp = await fetch("/dehypnotic/user_text/list?type=text");
+        if (!resp.ok) return [];
         const files = await resp.json();
-        const txtFiles = files
-            .filter(f => typeof f === "object" && f.path && f.path.toLowerCase().endsWith(".txt"))
-            .map(f => ({
-                path: TEXT_DIR + "/" + f.path,
-                name: f.path.replace(/\.txt$/i, ""),
-                modified: f.modified || 0,
-            }));
-        txtFiles.sort((a, b) => b.modified - a.modified);
-        return txtFiles;
+        return files.map(f => ({
+            path: f.path,
+            name: f.name,
+            modified: f.modified || 0,
+        }));
     } catch (e) {
         console.warn("[Text] listTextFiles exception:", e);
         return [];
@@ -29,13 +20,11 @@ async function listTextFiles() {
 
 async function saveTextFile(filename, text, overwrite = true) {
     const safeFilename = filename.replace(/[/\\:*?"<>|]/g, "_");
-    const filePath = `${TEXT_DIR}/${safeFilename}.txt`;
-    const url = `/userdata/${encodeURIComponent(filePath)}?overwrite=${overwrite}`;
     try {
-        const resp = await fetch(url, {
+        const resp = await fetch("/dehypnotic/user_text/save", {
             method: "POST",
-            body: text,
-            headers: { "Content-Type": "text/plain" }
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: "text", filename: safeFilename, content: text, overwrite })
         });
         return resp.ok;
     } catch (e) {
@@ -46,7 +35,7 @@ async function saveTextFile(filename, text, overwrite = true) {
 
 async function loadTextFile(filePath) {
     try {
-        const resp = await fetch(`/userdata/${encodeURIComponent(filePath)}`, { cache: "no-store" });
+        const resp = await fetch(`/dehypnotic/user_text/load?type=text&filename=${encodeURIComponent(filePath)}`, { cache: "no-store" });
         if (!resp.ok) {
             console.warn("[Text] loadTextFile error:", resp.status);
             return null;
@@ -57,6 +46,7 @@ async function loadTextFile(filePath) {
         return null;
     }
 }
+
 
 function createButton(text, onClick, textColor = "#34d399") {
     const btn = document.createElement("button");
@@ -387,7 +377,7 @@ app.registerExtension({
                     if (!filename) return;
 
                     const safeBase = filename.replace(/[/\\:*?"<>|]/g, "_");
-                    const proposedPath = `${TEXT_DIR}/${safeBase}.txt`;
+                    const proposedPath = `${safeBase}.txt`;
                     const existingPaths = Array.from(fileSelect.options).map(o => o.value);
                     if (existingPaths.includes(proposedPath)) {
                         if (!confirm(`"${safeBase}.txt" already exists. Overwrite?`)) return;
@@ -419,7 +409,11 @@ app.registerExtension({
                     if (!confirm(`Are you sure you want to delete "${baseName}"?`)) return;
 
                     try {
-                        const resp = await fetch(`/userdata/${encodeURIComponent(selected)}`, { method: "DELETE" });
+                        const resp = await fetch("/dehypnotic/user_text/delete", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ type: "text", filename: selected })
+                        });
                         if (resp.ok) {
                             if (currentFilePath === selected) {
                                 currentFilePath = "";
