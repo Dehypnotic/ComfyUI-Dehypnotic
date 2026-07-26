@@ -12,9 +12,11 @@ A suite of feature-rich, high-performance custom nodes for [ComfyUI](https://git
   - [🧘 AspectRatio (Dehypnotic)](#-aspectratio-dehypnotic)
   - [🧘 Set Dehypnotic & Get Dehypnotic](#-set-dehypnotic--get-dehypnotic)
   - [🧘 NumberedText (Dehypnotic)](#-numberedtext-dehypnotic)
+  - [🧘 Text (Dehypnotic)](#-text-dehypnotic)
   - [🧘 RangeToString (Dehypnotic)](#-rangetostring-dehypnotic)
   - [🧘 Save Audio (Dehypnotic)](#-save-audio-dehypnotic)
   - [🧘 Save Images (Dehypnotic)](#-save-images-dehypnotic)
+  - [🧘 FrameSave (Dehypnotic)](#-framesave-dehypnotic)
   - [🧘 Load Video (Dehypnotic)](#-load-video-dehypnotic)
   - [🧘 Save Video (Dehypnotic)](#-save-video-dehypnotic)
 - [Security and External Save Paths](#security-and-external-save-paths-comfyui-manager-compliant)
@@ -241,6 +243,32 @@ An advanced multi-format image saving node featuring sequence numbering, date-ba
     <th valign=top><img width="246" height="302" alt="image" src="https://github.com/user-attachments/assets/2e95f903-7b48-4e8e-b025-9796c587b2df" /></th>
   </tr>
 </table>
+
+---
+
+### 🧘 FrameSave (Dehypnotic)
+**Class Name**: `FrameSave` / `FrameSaveDehypnotic`  
+**Category**: `Dehypnotic/💾 IO`
+
+An interactive frame selection, inspection, and temporary saving node designed for working with image sequences and animation batches. Automatically clears its temporary folder on every execution, filters frame ranges with custom stepper controls, and provides an interactive full-brightness gallery with full-resolution zoom.
+
+#### Key Features:
+- **Automatic Temp Folder Clearance**: Empties old temporary files from `temp/dehypnotic_frame_save` automatically on every run before saving the current filtered frame batch.
+- **Range & Step Filtering**: Filter visible and saved frames using 1-indexed `Start frame`, `End frame` (`0` = all remaining frames), and `Step` interval controls.
+- **Custom `[-]` & `[+]` Steppers**: Clean stepper buttons around `Start frame`, `End frame`, and `Step` fields for intuitive value adjustments.
+- **Live Upstream Frame Count**: Automatically traces input graph links recursively (past `Set/Get` wireless nodes, `AspectRatio`, and processing nodes) to detect and display the total frame count of connected video/image sources `(Total: N)` live before workflow execution.
+- **In-Browser Directory Picker Modal**: Built-in interactive folder browser modal (`📁`) that allows visual directory and drive navigation (`C:\`, `D:\`, `Output`, etc.) with zero browser upload security prompts.
+- **Full-Brightness Gallery & Fullscreen Zoom**: Scrollable 500px thumbnail gallery displaying filtered frames at 100% brightness with mint-green (`#34d399`) selection borders, double-click fullscreen zoom overlay, and instant "Select All" / "Deselect All" buttons. Default selection is set to none on first view.
+- **Security & Whitelist Validation**: Ensures saving to chosen target locations strictly obeys ComfyUI output path restrictions or custom allowed paths defined in `dehypnotic_save_allowed_paths.json`.
+
+#### Inputs & Outputs:
+| Type | Name | Default | Description |
+| :--- | :--- | :--- | :--- |
+| **Required Input** | `images` | - | Input image batch sequence (`IMAGE`). |
+| **Optional Input** | `file_path` | `""` | Destination folder path (relative or absolute). |
+| **Optional Input** | `start_frame` | `1` | First frame index to include (1-indexed). |
+| **Optional Input** | `end_frame` | `0` | Last frame index to include (0 = all remaining frames). |
+| **Optional Input** | `frame_step` | `1` | Frame step interval (e.g., 3 = frames 1, 4, 7...). |
 
 ---
 

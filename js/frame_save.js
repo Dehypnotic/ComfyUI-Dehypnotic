@@ -898,8 +898,8 @@ app.registerExtension({
         } else {
           f.el.style.border = "3px solid transparent";
           f.el.style.boxShadow = "none";
-          f.el.style.opacity = "0.45";
-          f.el.style.filter = "grayscale(30%)";
+          f.el.style.opacity = "1.0";
+          f.el.style.filter = "none";
         }
       });
       selBadge.textContent = `(${selectedCount}/${framesData.length} selected)`;
