@@ -346,15 +346,11 @@ A comprehensive video renderer and frame exporter node leveraging bundled `image
   ```json
   { "allowed_roots": ["D:/AudioExports", "E:/TeamShare/Audio"] }
   ```
-- You can also place the file globally under:
-  - `<ComfyUI>/user/`
-  - `<ComfyUI>/user/config/`
-- The node refuses to write outside `output/` unless the path is under one of the whitelisted roots. Edit this file offline and restart ComfyUI.
 
 Whitelist behavior and safety
-- Recommended location under ComfyUI root (e.g., `ComfyUI/config/`) so it survives node updates.
+- The node refuses to write outside `ComfyUI/output/` unless the path is under one of the whitelisted roots.
+- Recommended location in ComfyUI/config/ instead of the node folder so it survives node updates.
 - Loader lookup order: env var → global ComfyUI locations → node folder.
-- A node‑local file is used only if it defines at least one allowed root; empty example files are ignored.
 - Lines starting with `#` are treated as comments in the JSON file.
 - An allowed root permits saving in that folder and all subfolders; whitelist a deeper path to restrict more tightly.
 
