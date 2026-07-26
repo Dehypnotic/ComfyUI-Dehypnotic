@@ -13,6 +13,10 @@
 // in both Classic and Nodes 2.0, and inside subgraphs (native path verified on
 // frontend 1.45.15).
 
+# The following function/section is based on code by Pixaroma
+# MIT License - Copyright (c) 2026 pixaroma
+# Full license terms: https://gitlab.com/pixaroma/comfyui-pixaroma/-/blob/main/LICENSE
+
 import { app } from "/scripts/app.js";
 import { registerDehypnoticSetNode } from "./set_node.mjs";
 import { registerDehypnoticGetNode } from "./get_node.mjs";

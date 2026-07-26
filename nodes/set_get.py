@@ -15,6 +15,10 @@ frontend registration (registerCustomNodes runs after the backend defs are
 registered) means the JS class is what actually gets instantiated.
 """
 
+# The following function/section is based on code by Pixaroma
+# MIT License - Copyright (c) 2026 pixaroma
+# Full license terms: https://gitlab.com/pixaroma/comfyui-pixaroma/-/blob/main/LICENSE
+
 from ._type_helpers import ANY
 
 _CATEGORY = "Dehypnotic/🔀 Wireless Links"

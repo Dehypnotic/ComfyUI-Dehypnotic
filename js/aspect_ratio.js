@@ -1087,6 +1087,7 @@ function writeState(node, state) {
 // The following function/section is based on code by Pixaroma
 // MIT License - Copyright (c) 2026 Pixaroma
 // Full license terms: https://gitlab.com/pixaroma/comfyui-pixaroma/-/blob/main/LICENSE
+
 // Fit ratio to preview bounding box
 function fitRectToBox(rw, rh, maxW, maxH) {
   const aspect = rw / rh;

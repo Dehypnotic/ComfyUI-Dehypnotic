@@ -16,6 +16,10 @@
 // The traversal is verified against the native resolveVirtualOutput path in
 // frontend 1.45.15, so subgraph flattening at submission "just works".
 
+# The following function/section is based on code by Pixaroma
+# MIT License - Copyright (c) 2026 pixaroma
+# Full license terms: https://gitlab.com/pixaroma/comfyui-pixaroma/-/blob/main/LICENSE
+
 export const SET_TYPE = "DehypnoticSetNode";
 export const GET_TYPE = "DehypnoticGetNode";
 
