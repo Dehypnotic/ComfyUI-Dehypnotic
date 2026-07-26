@@ -1084,6 +1084,9 @@ function writeState(node, state) {
   node.properties[STATE_PROP] = JSON.stringify(state);
 }
 
+// The following function/section is based on code by Pixaroma
+// MIT License - Copyright (c) 2026 Pixaroma
+// Full license terms: https://gitlab.com/pixaroma/comfyui-pixaroma/-/blob/main/LICENSE
 // Fit ratio to preview bounding box
 function fitRectToBox(rw, rh, maxW, maxH) {
   const aspect = rw / rh;
@@ -1099,6 +1102,9 @@ function calculateDims(state, connectedImageSize = null) {
   const snap = parseInt(state.snap) || 16;
   let w = 1024, h = 1024;
 
+  // The following function/section is based on code by Pixaroma
+  // MIT License - Copyright (c) 2026 Pixaroma
+  // Full license terms: https://gitlab.com/pixaroma/comfyui-pixaroma/-/blob/main/LICENSE
   const snapTo = (val, step) => Math.max(64, Math.round(val / step) * step);
 
   if (mode === "preset") {
@@ -2028,6 +2034,9 @@ function renderUI(node) {
     content.appendChild(scalePanel);
   }
 
+  // The following function/section is based on code by Pixaroma
+  // MIT License - Copyright (c) 2026 Pixaroma
+  // Full license terms: https://gitlab.com/pixaroma/comfyui-pixaroma/-/blob/main/LICENSE
   // Draw the preview box if we are not on the scale_image tab
   if (activeTab !== "scaled_image") {
     const preview = document.createElement("div");

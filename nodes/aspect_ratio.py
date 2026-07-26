@@ -141,6 +141,9 @@ class AspectRatio:
 
         w, h = 1024, 1024
 
+        # The following function/section is based on code by Pixaroma
+        # MIT License - Copyright (c) 2026 Pixaroma
+        # Full license terms: https://gitlab.com/pixaroma/comfyui-pixaroma/-/blob/main/LICENSE
         def snap_to(val, step):
             return max(64, int(math.floor(val / step + 0.5)) * step)
 
