@@ -532,8 +532,7 @@ class SaveAudioMP3:
     DESCRIPTION = (
     "Saves to ComfyUI/output by default. To allow external locations, create a file named "
 	" dehypnotic_save_allowed_paths.json containing for example: { \"allowed_roots\": [\"D:/AudioExports\", \"E:/TeamShare/Audio\"] }. "
-	"Preferably place it in a global area like e.g. <ComfyUI>/user/config/. Read the Github repository at "
-    "https://github.com/Dehypnotic/ComfyUI-Dehypnotic for more info."
+	"Place it in <ComfyUI>/user/config/. Read the Github repository at https://github.com/Dehypnotic/ComfyUI-Dehypnotic for more info."
     )
 
     @classmethod
