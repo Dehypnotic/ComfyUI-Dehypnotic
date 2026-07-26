@@ -407,8 +407,7 @@ class FrameSave:
 		"Saves to ComfyUI/output by default. "
 		"To allow external locations, create a file named dehypnotic_save_allowed_paths.json containing for example: "
 		"{ \"allowed_roots\": [\"D:/ImageExports\", \"E:/TeamShare/Images\"] }. Place it in <ComfyUI>/user/config/. "
-		"Read the Github repository for more info. I have placed the settings number_paddings, number_start, "
-    	"loop_still_to_audio, and show_progress in properties (rigkt click) and ComfyUI settings to keep the node compact."
+		"Read the Github repository for more info."
 	)
 
 	@classmethod
