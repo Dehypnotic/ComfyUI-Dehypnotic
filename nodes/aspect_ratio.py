@@ -48,7 +48,7 @@ DEFAULT_STATE = {
     "height": 1024
 }
 
-class AspectRatioAdvancedV2:
+class AspectRatio:
     DESCRIPTION = (
     "In Presets, double-click the 3 smaller preset-buttons to set your own presets. Attach an "
     "image to use it as a reference for custom ratio or 'dims' (short for dimensions). "

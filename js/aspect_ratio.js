@@ -2203,7 +2203,7 @@ app.graphToPrompt = async function (...args) {
 };
 
 app.registerExtension({
-  name: "AspectRatioAdvancedV2.Extension",
+  name: "AspectRatio.Extension",
 
   beforeRegisterNodeDef(nodeType, nodeData) {
     if (nodeData.name !== "dehypnotic_AspectRatio" && nodeData.name !== "AspectRatioAdvanced") return;

@@ -28,7 +28,7 @@ A suite of feature-rich, high-performance custom nodes for [ComfyUI](https://git
 ## Nodes Overview
 
 ### 🧘 AspectRatio (Dehypnotic)
-**Class Name**: `AspectRatioAdvancedV2` / `dehypnotic_AspectRatio`  
+**Class Name**: `AspectRatio` / `dehypnotic_AspectRatio`  
 **Category**: `Dehypnotic/📐 Aspect Ratio`
 
 A flexible aspect ratio and resolution generator node with interactive frontend controls, visual aspect ratio presets, image reference scaling, grid snapping, and VAE encoding support.
