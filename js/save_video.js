@@ -9,7 +9,37 @@ const EXTENSION_NAME = "Dehypnotic.SaveVideo";
 const NODE_TYPE = "SaveVideoDehypnotic";
 const PROPERTY_WIDGETS = ["number_padding", "number_start", "loop_still_to_audio", "show_progress"];
 
+const SETTING_IDS = {
+  number_padding: "Dehypnotic.SaveVideo.NumberPadding",
+  number_start: "Dehypnotic.SaveVideo.NumberStart",
+  loop_still_to_audio: "Dehypnotic.SaveVideo.LoopStillToAudio",
+  show_progress: "Dehypnotic.SaveVideo.ShowProgress",
+};
+
 // ---- helpers ----------------------------------------------------------------
+
+function getSettingValue(propName, fallbackDefault) {
+  const id = SETTING_IDS[propName];
+  if (!id) return fallbackDefault;
+  const val = app.ui?.settings?.getSettingValue?.(id);
+  return val !== undefined && val !== null ? val : fallbackDefault;
+}
+
+function syncSettingToNodes(propName, val) {
+  if (val === undefined || val === null) return;
+  const graph = app.canvas?.graph || app.graph;
+  if (!graph) return;
+  for (const n of graph._nodes || []) {
+    if (n.comfyClass === NODE_TYPE || n.type === NODE_TYPE) {
+      if (n.properties) {
+        n.properties[propName] = val;
+      }
+      const w = n.widgets?.find((w) => w.name === propName);
+      if (w) w.value = val;
+      n.setDirtyCanvas?.(true, true);
+    }
+  }
+}
 
 function fitHeight(node) {
   node.setSize([node.size[0], node.computeSize([node.size[0], node.size[1]])[1]]);
@@ -25,7 +55,11 @@ function hidePropertyWidgets(node) {
       w.draw = () => {};
 
       if (node.properties[w.name] === undefined) {
-        node.properties[w.name] = w.value;
+        const val = getSettingValue(w.name, w.value);
+        node.properties[w.name] = val;
+        w.value = val;
+      } else {
+        w.value = node.properties[w.name];
       }
 
       const isBool = typeof w.value === "boolean";
@@ -57,6 +91,46 @@ function hidePropertyWidgets(node) {
 
 app.registerExtension({
   name: EXTENSION_NAME,
+  settings: [
+    {
+      id: SETTING_IDS.number_padding,
+      name: "Default number_padding",
+      type: "number",
+      defaultValue: 4,
+      attrs: { min: 1, max: 10, step: 1 },
+      tooltip: "Default sequence number digit padding (0001, 0002, ...) for Save Video.",
+      category: ["🧘 Dehypnotic", "Save Video", "Number Padding"],
+      onChange: (val) => syncSettingToNodes("number_padding", val),
+    },
+    {
+      id: SETTING_IDS.number_start,
+      name: "Default number_start",
+      type: "number",
+      defaultValue: 1,
+      attrs: { min: 0, max: 1000000, step: 1 },
+      tooltip: "Default starting sequence number for Save Video.",
+      category: ["🧘 Dehypnotic", "Save Video", "Number Start"],
+      onChange: (val) => syncSettingToNodes("number_start", val),
+    },
+    {
+      id: SETTING_IDS.loop_still_to_audio,
+      name: "Default loop_still_to_audio",
+      type: "boolean",
+      defaultValue: false,
+      tooltip: "If only one frame plus audio, loop the frame to match audio duration.",
+      category: ["🧘 Dehypnotic", "Save Video", "Loop Still to Audio"],
+      onChange: (val) => syncSettingToNodes("loop_still_to_audio", val),
+    },
+    {
+      id: SETTING_IDS.show_progress,
+      name: "Default show_progress",
+      type: "boolean",
+      defaultValue: true,
+      tooltip: "Show rendering progress in console for Save Video.",
+      category: ["🧘 Dehypnotic", "Save Video", "Show Progress"],
+      onChange: (val) => syncSettingToNodes("show_progress", val),
+    },
+  ],
 
   async nodeCreated(node) {
     if (node.comfyClass !== NODE_TYPE) return;

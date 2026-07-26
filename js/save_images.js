@@ -69,8 +69,105 @@ function showImageOverlay(src) {
   document.body.appendChild(overlay);
 }
 
+const PROPERTY_WIDGETS = ["number_padding", "number_start", "dpi"];
+
+const SETTING_IDS = {
+  number_padding: "Dehypnotic.SaveImages.NumberPadding",
+  number_start: "Dehypnotic.SaveImages.NumberStart",
+  dpi: "Dehypnotic.SaveImages.DPI",
+};
+
+function getSettingValue(propName, fallbackDefault) {
+  const id = SETTING_IDS[propName];
+  if (!id) return fallbackDefault;
+  const val = app.ui?.settings?.getSettingValue?.(id);
+  return val !== undefined && val !== null ? val : fallbackDefault;
+}
+
+function syncSettingToNodes(propName, val) {
+  if (val === undefined || val === null) return;
+  const graph = app.canvas?.graph || app.graph;
+  if (!graph) return;
+  for (const n of graph._nodes || []) {
+    if (n.comfyClass === NODE_TYPE || n.type === NODE_TYPE) {
+      if (n.properties) {
+        n.properties[propName] = val;
+      }
+      const w = n.widgets?.find((w) => w.name === propName);
+      if (w) w.value = val;
+      n.setDirtyCanvas?.(true, true);
+    }
+  }
+}
+
+function hidePropertyWidgets(node) {
+  if (!node.widgets) return;
+  for (const w of node.widgets) {
+    if (PROPERTY_WIDGETS.includes(w.name)) {
+      w.type = "hidden";
+      w.computeSize = () => [0, -4];
+      w.draw = () => {};
+
+      if (node.properties[w.name] === undefined) {
+        const val = getSettingValue(w.name, w.value);
+        node.properties[w.name] = val;
+        w.value = val;
+      } else {
+        w.value = node.properties[w.name];
+      }
+
+      node.properties_info = node.properties_info || [];
+      if (!node.properties_info.find((p) => p.name === w.name)) {
+        node.properties_info.push({
+          name: w.name,
+          type: "int",
+          step: 1,
+          precision: 0,
+          min: w.options?.min ?? 0,
+          max: w.options?.max ?? 1000000,
+        });
+      }
+    }
+  }
+  node.setSize(node.computeSize());
+  app.graph?.setDirtyCanvas(true, true);
+}
+
 app.registerExtension({
   name: EXTENSION_NAME,
+
+  settings: [
+    {
+      id: SETTING_IDS.number_padding,
+      name: "Default number_padding",
+      type: "number",
+      defaultValue: 4,
+      attrs: { min: 1, max: 10, step: 1 },
+      tooltip: "Default sequence number digit padding (0001, 0002, ...) for Save Images.",
+      category: ["🧘 Dehypnotic", "Save Images", "Number Padding"],
+      onChange: (val) => syncSettingToNodes("number_padding", val),
+    },
+    {
+      id: SETTING_IDS.number_start,
+      name: "Default number_start",
+      type: "number",
+      defaultValue: 1,
+      attrs: { min: 0, max: 1000000, step: 1 },
+      tooltip: "Default starting sequence number for Save Images.",
+      category: ["🧘 Dehypnotic", "Save Images", "Number Start"],
+      onChange: (val) => syncSettingToNodes("number_start", val),
+    },
+    {
+      id: SETTING_IDS.dpi,
+      name: "Default dpi",
+      type: "number",
+      defaultValue: 300,
+      attrs: { min: 1, max: 1200, step: 1 },
+      tooltip: "Default DPI (dots per inch) for Save Images.",
+      category: ["🧘 Dehypnotic", "Save Images", "DPI"],
+      onChange: (val) => syncSettingToNodes("dpi", val),
+    },
+  ],
 
   async nodeCreated(node) {
     if (node.comfyClass !== NODE_TYPE) return;
@@ -89,38 +186,9 @@ app.registerExtension({
     }; 
     node.size[0] = Math.max(node.size[0], 300);
 
-    // ── Move specific widgets to Properties Panel ─────────────────────────
-    setTimeout(() => {
-      if (node.widgets) {
-        for (const w of node.widgets) {
-          if (w.name === "number_padding" || w.name === "number_start" || w.name === "dpi") {
-            // Hide the widget from the node body
-            w.type = "hidden";
-            w.computeSize = () => [0, -4];
-
-            // Register as a property so it shows in the Properties menu
-            if (node.properties[w.name] === undefined) {
-              node.properties[w.name] = w.value;
-            }
-
-            // Tell LiteGraph it's an integer so it doesn't show 3 decimals
-            node.properties_info = node.properties_info || [];
-            if (!node.properties_info.find((p) => p.name === w.name)) {
-              node.properties_info.push({
-                name: w.name,
-                type: "int",
-                step: 1,
-                precision: 0,
-                min: w.options?.min || 0,
-                max: w.options?.max || 1000000
-              });
-            }
-          }
-        }
-        node.setSize(node.computeSize());
-        app.graph?.setDirtyCanvas(true, true);
-      }
-    }, 100);
+    hidePropertyWidgets(node);
+    setTimeout(() => hidePropertyWidgets(node), 50);
+    setTimeout(() => hidePropertyWidgets(node), 150);
 
     // Sync property changes back to the hidden widgets so Python gets them
     const origOnPropertyChanged = node.onPropertyChanged;
@@ -422,6 +490,9 @@ app.registerExtension({
     const origOnConfigure = node.onConfigure;
     node.onConfigure = function (info) {
       origOnConfigure?.apply(this, arguments);
+      hidePropertyWidgets(node);
+      setTimeout(() => hidePropertyWidgets(node), 50);
+      setTimeout(() => hidePropertyWidgets(node), 150);
       if (node._dhUpdateToggle) node._dhUpdateToggle();
       if (node._dhUpdateVis) node._dhUpdateVis();
     };
