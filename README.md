@@ -270,6 +270,8 @@ An interactive frame selection, inspection, and temporary saving node designed f
 | **Optional Input** | `end_frame` | `0` | Last frame index to include (0 = all remaining frames). |
 | **Optional Input** | `frame_step` | `1` | Frame step interval (e.g., 3 = frames 1, 4, 7...). |
 
+<img width="529" height="606" alt="image" src="https://github.com/user-attachments/assets/bf73c856-5ad9-46ff-9116-1fca21a7126b" />
+
 ---
 
 ### 🧘 Load Video (Dehypnotic)
