@@ -13,19 +13,135 @@ const MINT_GREEN = "#34d399";
 const MIN_NODE_WIDTH = 580;
 
 // ── Upstream Source & Frame Count Tracing ───────────────────────────────────
+function getGraphAncestors(graph) {
+  if (!graph) return [];
+  const chain = [graph];
+  let current = graph;
+  const root = graph.rootGraph || graph;
+  if (graph === root) return [root];
+
+  const visited = new Set([graph]);
+  while (current !== root) {
+    let found = false;
+    const rootNodes = root.nodes || root._nodes || [];
+    for (const n of rootNodes) {
+      if (n && n.subgraph === current) {
+        chain.push(root);
+        current = root;
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+
+    const subgraphs = root._subgraphs || root.subgraphs;
+    if (subgraphs) {
+      const sgValues = typeof subgraphs.values === "function" ? [...subgraphs.values()] : Object.values(subgraphs);
+      for (const sg of sgValues) {
+        if (sg === current || !sg) continue;
+        const sgNodes = sg.nodes || sg._nodes || [];
+        for (const n of sgNodes) {
+          if (n && n.subgraph === current) {
+            if (visited.has(sg)) { found = false; break; }
+            visited.add(sg);
+            chain.push(sg);
+            current = sg;
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
+      }
+    }
+
+    if (!found) {
+      if (!chain.includes(root)) chain.push(root);
+      break;
+    }
+  }
+  return chain;
+}
+
+function isGetNode(node) {
+  if (!node) return false;
+  const type = String(node.type || "").toLowerCase();
+  const comfyClass = String(node.comfyClass || "").toLowerCase();
+  return (
+    comfyClass === "dehypnoticgetnode" || type === "dehypnoticgetnode" ||
+    comfyClass === "getnode" || type === "getnode" ||
+    comfyClass === "get" || type === "get" ||
+    comfyClass.endsWith("getnode") || type.endsWith("getnode") ||
+    comfyClass.startsWith("get (") || type.startsWith("get (") ||
+    type.endsWith("_get") || comfyClass.endsWith("_get")
+  );
+}
+
+function isSetNode(node) {
+  if (!node) return false;
+  const type = String(node.type || "").toLowerCase();
+  const comfyClass = String(node.comfyClass || "").toLowerCase();
+  return (
+    comfyClass === "dehypnoticsetnode" || type === "dehypnoticsetnode" ||
+    comfyClass === "setnode" || type === "setnode" ||
+    comfyClass === "set" || type === "set" ||
+    comfyClass.endsWith("setnode") || type.endsWith("setnode") ||
+    comfyClass.startsWith("set (") || type.startsWith("set (") ||
+    type.endsWith("_set") || comfyClass.endsWith("_set")
+  );
+}
+
+function getVariableName(node) {
+  if (!node || !node.widgets) return null;
+  const targetWidgetNames = ["name", "variable", "constant", "key", "var", "tag"];
+  for (const wname of targetWidgetNames) {
+    const w = node.widgets.find((w) => w && w.name === wname);
+    if (w && typeof w.value === "string" && w.value) {
+      return w.value;
+    }
+  }
+  const firstVal = node.widgets[0]?.value;
+  return typeof firstVal === "string" ? firstVal : null;
+}
+
+function findSetterByNameInGraph(graph, startGraph, name) {
+  if (!name) return null;
+  const ancestors = getGraphAncestors(startGraph || graph || app.graph);
+  for (const g of ancestors) {
+    const nodes = g.nodes || g._nodes || [];
+    for (const node of nodes) {
+      if (node && isSetNode(node)) {
+        const val = getVariableName(node);
+        if (val === name) {
+          return { node, graph: g };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function getLink(graph, linkId) {
+  if (!graph || linkId == null) return null;
+  if (typeof graph.getLink === "function") return graph.getLink(linkId);
+  const store = graph._links ?? graph.links;
+  if (!store) return null;
+  if (store instanceof Map) return store.get(linkId) ?? null;
+  return store[linkId] ?? null;
+}
+
 function findUpstreamSourceInfo(node, visited = new Set()) {
-  if (!app.graph || !node || visited.has(node.id)) return null;
+  if (!node || visited.has(node.id)) return null;
   visited.add(node.id);
 
-  // 1. Check if node is SetNode / GetNode
-  if (node.comfyClass === "DehypnoticGetNode") {
-    const targetVar = node.widgets?.find((w) => w.name === "variable")?.value;
+  const currentGraph = node.graph || app.graph;
+
+  // 1. Check if node is GetNode
+  if (isGetNode(node)) {
+    const targetVar = getVariableName(node);
     if (targetVar) {
-      const setNode = app.graph._nodes?.find(
-        (n) => n.comfyClass === "DehypnoticSetNode" && n.widgets?.find((w) => w.name === "variable")?.value === targetVar
-      );
-      if (setNode) {
-        return findUpstreamSourceInfo(setNode, visited);
+      const setNodeEntry = findSetterByNameInGraph(currentGraph, currentGraph, targetVar);
+      if (setNodeEntry && setNodeEntry.node) {
+        return findUpstreamSourceInfo(setNodeEntry.node, visited);
       }
     }
   }
@@ -64,9 +180,12 @@ function findUpstreamSourceInfo(node, visited = new Set()) {
   if (node.inputs) {
     for (const input of node.inputs) {
       if (input.link != null) {
-        const link = app.graph.links[input.link];
+        const link = getLink(currentGraph, input.link);
         if (link) {
-          const parentNode = app.graph.getNodeById(link.origin_id);
+          const originGraph = link.graph || currentGraph;
+          const parentNode = typeof originGraph.getNodeById === "function"
+            ? originGraph.getNodeById(link.origin_id)
+            : (app.graph && typeof app.graph.getNodeById === "function" ? app.graph.getNodeById(link.origin_id) : null);
           if (parentNode) {
             const res = findUpstreamSourceInfo(parentNode, visited);
             if (res) return res;
