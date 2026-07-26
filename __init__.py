@@ -12,13 +12,11 @@ NODE_CLASS_MAPPINGS = {
     "dehypnotic_RangeToString": RangeToString,
     "DehypnoticSetNode": DehypnoticSetNode,
     "DehypnoticGetNode": DehypnoticGetNode,
-    "AspectRatioAdvanced": AspectRatioAdvancedV2,
     "dehypnotic_AspectRatio": AspectRatioAdvancedV2,
     "SaveAudioMP3Dehypnotic": SaveAudioMP3,
     "SaveImagesDehypnotic": SaveImages,
     "SaveVideoDehypnotic": SaveVideo,
     "LoadVideoDehypnotic": LoadVideo,
-    "NumberedText": NumberedText,
     "dehypnotic_NumberedText": NumberedText,
     "dehypnotic_Text": TextDehypnotic
 }
@@ -26,13 +24,11 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "dehypnotic_RangeToString": "🧘 RangeToString (Dehypnotic)",
     "DehypnoticSetNode": "🧘 Set Dehypnotic",
     "DehypnoticGetNode": "🧘 Get Dehypnotic",
-    "AspectRatioAdvanced": "AspectRatioAdvanced - DEPRECATED - REPLACE",
     "dehypnotic_AspectRatio": "🧘 AspectRatio (Dehypnotic)",
     "SaveAudioMP3Dehypnotic": "🧘 Save Audio (Dehypnotic)",
     "SaveImagesDehypnotic": "🧘 Save Images (Dehypnotic)",
     "SaveVideoDehypnotic": "🧘 Save Video (Dehypnotic)",
     "LoadVideoDehypnotic": "🧘 Load Video (Dehypnotic)",
-    "NumberedText": "NumberedText - DEPRECATED - REPLACE",
     "dehypnotic_NumberedText": "🧘 NumberedText (Dehypnotic)",
     "dehypnotic_Text": "🧘 Text (Dehypnotic)"
 }
