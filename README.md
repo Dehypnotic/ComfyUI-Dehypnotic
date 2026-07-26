@@ -388,4 +388,4 @@ Install from ComfyUI Manager (search for Dehypnotic), or
 ---
 ## License
 
-<a href="https://github.com/Dehypnotic/ComfyUI-Dehypnotic/blob/main/LICENSE">MIT License</a>
+⚖️ Licensed under <a href="https://github.com/Dehypnotic/ComfyUI-Dehypnotic/blob/main/LICENSE">MIT</a>
