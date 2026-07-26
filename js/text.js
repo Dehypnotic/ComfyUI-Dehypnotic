@@ -46,7 +46,7 @@ async function saveTextFile(filename, text, overwrite = true) {
 
 async function loadTextFile(filePath) {
     try {
-        const resp = await fetch(`/userdata/${encodeURIComponent(filePath)}`);
+        const resp = await fetch(`/userdata/${encodeURIComponent(filePath)}`, { cache: "no-store" });
         if (!resp.ok) {
             console.warn("[Text] loadTextFile error:", resp.status);
             return null;
