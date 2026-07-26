@@ -404,7 +404,7 @@ class FrameSave:
 	"""
 
 	DESCRIPTION = (
-		"Filters and saves image frames for interactive preview and selection. Saves to ComfyUI/output by default. "
+		"Saves to ComfyUI/output by default. "
 		"To allow external locations, create a file named dehypnotic_save_allowed_paths.json containing for example: "
 		"{ \"allowed_roots\": [\"D:/ImageExports\", \"E:/TeamShare/Images\"] }. Place it in <ComfyUI>/user/config/. "
 		"Read the Github repository for more info. I have placed the settings number_paddings, number_start, "
