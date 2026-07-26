@@ -347,8 +347,6 @@ A comprehensive video renderer and frame exporter node leveraging bundled `image
   { "allowed_roots": ["D:/AudioExports", "E:/TeamShare/Audio"] }
   ```
 - You can also place the file globally under:
-  - `<ComfyUI>/`
-  - `<ComfyUI>/config/`
   - `<ComfyUI>/user/`
   - `<ComfyUI>/user/config/`
 - The node refuses to write outside `output/` unless the path is under one of the whitelisted roots. Edit this file offline and restart ComfyUI.
