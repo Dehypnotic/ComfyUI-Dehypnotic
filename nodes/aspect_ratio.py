@@ -250,14 +250,14 @@ class AspectRatioAdvancedV2:
 
         if unique_id is not None and PromptServer is not None:
             try:
-                PromptServer.instance.send_sync("aspect_ratio_advanced_v2.update_dims", {
+                PromptServer.instance.send_sync("aspect_ratio.update_dims", {
                     "node_id": str(unique_id),
                     "width": w,
                     "height": h,
                     "mode": mode
                 })
             except Exception as e:
-                print(f"[aspect_ratio_advanced_v2] Error sending sync: {e}")
+                print(f"[aspect_ratio] Error sending sync: {e}")
 
         batch_size = 1
         if image is not None:

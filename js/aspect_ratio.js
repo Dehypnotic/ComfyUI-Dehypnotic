@@ -2126,7 +2126,7 @@ function setupNode(node) {
 }
 
 // Global synchronization listener
-api.addEventListener("aspect_ratio_advanced_v2.update_dims", (e) => {
+api.addEventListener("aspect_ratio.update_dims", (e) => {
   const { node_id, width, height, mode } = e.detail;
   // Deep search in graph for target node
   const visit = (graph) => {

@@ -1,6 +1,6 @@
 from .nodes.range_to_string import RangeToString
 from .nodes.set_get import DehypnoticSetNode, DehypnoticGetNode
-from .nodes.aspect_ratio_advanced_v2 import AspectRatioAdvancedV2
+from .nodes.aspect_ratio import AspectRatioAdvancedV2
 from .nodes.save_audio_mp3 import SaveAudioMP3
 from .nodes.save_images import SaveImages
 from .nodes.frame_save import FrameSave
