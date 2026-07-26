@@ -386,5 +386,6 @@ Install from ComfyUI Manager (search for Dehypnotic), or
 3. Restart ComfyUI.
 
 ---
+## License
 
 <a href="https://github.com/Dehypnotic/ComfyUI-Dehypnotic/blob/main/LICENSE">MIT License</a>
