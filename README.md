@@ -19,6 +19,7 @@ A suite of feature-rich, high-performance custom nodes for [ComfyUI](https://git
   - [🧘 FrameSave (Dehypnotic)](#-framesave-dehypnotic)
   - [🧘 Load Video (Dehypnotic)](#-load-video-dehypnotic)
   - [🧘 Save Video (Dehypnotic)](#-save-video-dehypnotic)
+  - [🧘 SonicColor Noise (Dehypnotic)](#-soniccolor-noise-dehypnotic)
 - [Security and External Save Paths](#security-and-external-save-paths-comfyui-manager-compliant)
 - [Installation](#installation)
 - [License](#license)
@@ -337,6 +338,30 @@ A comprehensive video renderer and frame exporter node leveraging bundled `image
 </th>
   </tr>
 </table>
+
+---
+
+### 🧘 SonicColor Noise (Dehypnotic)
+**Class Name**: `SonicColor`  
+**Category**: `Dehypnotic/Audio`
+
+A feature-rich noise generator and audio processor with an embedded dark GUI interface. Features 5 noise colors (White, Pink, Brown, Blue, Violet), a resonant filter with 5 modes, a 10-Band graphic equalizer, ADSR amplitude envelope shaping, real-time WebAudio live playback preview, user preset management, and non-looping audio mixing.
+
+#### Key Features:
+- **5 Noise Color Mixing**: Blend White, Pink (Paul Kellet filter), Brown (Leaky integrator), Blue, and Violet noise with individual gain controls.
+- **Embedded Custom GUI**: 3-tab dark-themed UI (Color Mix, Filter & Env, 10-Band EQ) with a fixed height and smooth internal scrollbar.
+- **Real-Time Live WebAudio Preview**: Interactive ▶️ Play/Stop preview button allowing you to hear adjustments to noise colors, filters, ADSR, and EQ in real time.
+- **Real-Time Media Duration Detection**: Automatically detects and populates media duration live from connected `Load Audio` or `Load Video` nodes, rounded up to whole seconds.
+- **Non-Looping External Audio Mix**: Mixes connected input audio once (padded with silence if shorter than target duration) with adjustable input volume.
+- **Resonant Filter & 10-Band Equalizer**: Built-in Lowpass, Highpass, Bandpass, and Notch filters plus a 10-Band graphic EQ (50Hz to 16kHz) for precise sound design.
+- **Preset System**: Easily save, load, update, and delete custom user presets directly from the GUI (saved safely in `ComfyUI/user/Dehypnotic/sonic_color/`).
+
+#### Inputs & Outputs:
+| Type | Name | Data Type | Description |
+| :--- | :--- | :--- | :--- |
+| **Required Input** | `params` | `STRING` | Embedded JSON string containing noise colors, filter, EQ, ADSR, and time settings. |
+| **Optional Input** | `audio` | `AUDIO` | Optional external audio track to mix with generated noise. |
+| **Output** | `audio` | `AUDIO` | Output audio dictionary containing waveform tensor and sample rate. |
 
 ---
 
