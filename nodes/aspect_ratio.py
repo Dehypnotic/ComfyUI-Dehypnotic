@@ -15,6 +15,9 @@ DEFAULT_STATE = {
     "preset_calc_mode": "min",
     "preset_value": 1024,
     "snap": 16,
+    "preset_snap": 16,
+    "custom_ratio_snap": 16,
+    "custom_dimensions_snap": 16,
 
     "preset_value_min": 1024,
     "preset_value_max": 1024,
@@ -135,7 +138,12 @@ class AspectRatio:
             state = {}
 
         mode = state.get("mode", "preset")
-        snap_raw = state.get("snap", 16)
+        if mode == "custom_ratio":
+            snap_raw = state.get("custom_ratio_snap", state.get("snap", 16))
+        elif mode == "custom_dimensions":
+            snap_raw = state.get("custom_dimensions_snap", state.get("snap", 16))
+        else:
+            snap_raw = state.get("preset_snap", state.get("snap", 16))
         if str(snap_raw).lower() in ["off", "1"] or snap_raw == 1:
             snap = 1
         else:

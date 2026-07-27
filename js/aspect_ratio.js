@@ -670,6 +670,9 @@ const DEFAULT_STATE = {
   preset_calc_mode: "min",
   preset_value: 1024,
   snap: 16,
+  preset_snap: 16,
+  custom_ratio_snap: 16,
+  custom_dimensions_snap: 16,
 
   preset_value_min: 1024,
   preset_value_max: 1024,
@@ -720,6 +723,17 @@ function getSnapValue(snapState) {
   if (String(snapState).toLowerCase() === "off" || snapState === 1 || snapState === "1") return 1;
   const parsed = parseInt(snapState);
   return Number.isNaN(parsed) ? 16 : parsed;
+}
+
+function getSnapForMode(state, modeOverride = null) {
+  const mode = modeOverride || state?.mode || "preset";
+  if (mode === "custom_ratio") {
+    return state?.custom_ratio_snap !== undefined ? state.custom_ratio_snap : state?.snap;
+  }
+  if (mode === "custom_dimensions") {
+    return state?.custom_dimensions_snap !== undefined ? state.custom_dimensions_snap : state?.snap;
+  }
+  return state?.preset_snap !== undefined ? state.preset_snap : state?.snap;
 }
 const QUICK_PICK_WIDTHS = [512, 768, 1024, 1536, 2048];
 const SCALE_ALGORITHMS = ["auto", "nearest exact", "bilinear", "area", "bicubic", "lanczos"];
@@ -1112,7 +1126,8 @@ function fitRectToBox(rw, rh, maxW, maxH) {
 // Live calculation matching the python side
 function calculateDims(state, connectedImageSize = null) {
   const mode = state.mode;
-  const snap = getSnapValue(state.snap);
+  const rawSnap = getSnapForMode(state, mode);
+  const snap = getSnapValue(rawSnap);
   let w = 1024, h = 1024;
 
   // The following function/section is based on code by Pixaroma
@@ -1527,7 +1542,7 @@ function renderUI(node) {
       {
         min: isMegapixels ? 0.1 : 64,
         max: isMegapixels ? 67.1 : 8192,
-        getStep: () => isMegapixels ? 0.1 : getSnapValue(state.snap),
+        getStep: () => isMegapixels ? 0.1 : getSnapValue(getSnapForMode(state, "preset")),
         isMegapixels: isMegapixels
       }
     );
@@ -1545,11 +1560,13 @@ function renderUI(node) {
     SNAP_OPTIONS.forEach((so) => {
       const sbtn = document.createElement("button");
       sbtn.type = "button";
-      const isActive = (state.snap === so) || (String(so).toLowerCase() === "off" && (state.snap === 1 || state.snap === "1" || String(state.snap).toLowerCase() === "off"));
+      const currentSnap = getSnapForMode(state, "preset");
+      const isActive = (currentSnap === so) || (String(so).toLowerCase() === "off" && (currentSnap === 1 || currentSnap === "1" || String(currentSnap).toLowerCase() === "off"));
       sbtn.className = "ara-v2-snap-btn" + (isActive ? " active" : "");
       sbtn.textContent = so;
       sbtn.addEventListener("click", (e) => {
         e.stopPropagation();
+        state.preset_snap = so;
         state.snap = so;
         writeState(node, state);
         renderUI(node);
@@ -1749,7 +1766,7 @@ function renderUI(node) {
       {
         min: isMegapixels ? 0.1 : 64,
         max: isMegapixels ? 67.1 : 8192,
-        getStep: () => isMegapixels ? 0.1 : getSnapValue(state.snap),
+        getStep: () => isMegapixels ? 0.1 : getSnapValue(getSnapForMode(state, "custom_ratio")),
         isMegapixels: isMegapixels
       }
     );
@@ -1765,11 +1782,13 @@ function renderUI(node) {
     SNAP_OPTIONS.forEach((so) => {
       const sbtn = document.createElement("button");
       sbtn.type = "button";
-      const isActive = (state.snap === so) || (String(so).toLowerCase() === "off" && (state.snap === 1 || state.snap === "1" || String(state.snap).toLowerCase() === "off"));
+      const currentSnap = getSnapForMode(state, "custom_ratio");
+      const isActive = (currentSnap === so) || (String(so).toLowerCase() === "off" && (currentSnap === 1 || currentSnap === "1" || String(currentSnap).toLowerCase() === "off"));
       sbtn.className = "ara-v2-snap-btn" + (isActive ? " active" : "");
       sbtn.textContent = so;
       sbtn.addEventListener("click", (e) => {
         e.stopPropagation();
+        state.custom_ratio_snap = so;
         state.snap = so;
         writeState(node, state);
         renderUI(node);
@@ -1796,11 +1815,13 @@ function renderUI(node) {
     SNAP_OPTIONS.forEach((so) => {
       const sbtn = document.createElement("button");
       sbtn.type = "button";
-      const isActive = (state.snap === so) || (String(so).toLowerCase() === "off" && (state.snap === 1 || state.snap === "1" || String(state.snap).toLowerCase() === "off"));
+      const currentSnap = getSnapForMode(state, "custom_dimensions");
+      const isActive = (currentSnap === so) || (String(so).toLowerCase() === "off" && (currentSnap === 1 || currentSnap === "1" || String(currentSnap).toLowerCase() === "off"));
       sbtn.className = "ara-v2-snap-btn" + (isActive ? " active" : "");
       sbtn.textContent = so;
       sbtn.addEventListener("click", (e) => {
         e.stopPropagation();
+        state.custom_dimensions_snap = so;
         state.snap = so;
         writeState(node, state);
         renderUI(node);
@@ -1872,7 +1893,7 @@ function renderUI(node) {
       {
         min: 64,
         max: 8192,
-        getStep: () => getSnapValue(state.snap),
+        getStep: () => getSnapValue(getSnapForMode(state, "custom_dimensions")),
         isMegapixels: false,
         disabled: state.custom_dimensions_input_image
       }
@@ -1917,7 +1938,7 @@ function renderUI(node) {
       {
         min: 64,
         max: 8192,
-        getStep: () => getSnapValue(state.snap),
+        getStep: () => getSnapValue(getSnapForMode(state, "custom_dimensions")),
         isMegapixels: false,
         disabled: state.custom_dimensions_input_image
       }
