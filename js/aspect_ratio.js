@@ -337,7 +337,7 @@ function injectCSS() {
     .ara-v2-val-snap-row {
       display: flex;
       align-items: flex-end;
-      gap: 8px;
+      gap: 6px;
     }
     
     .ara-v2-snap-group {
@@ -356,12 +356,18 @@ function injectCSS() {
       border: 1px solid #3f3f46;
       border-radius: 3px;
       color: #a1a1aa;
-      font-size: 9px;
+      font-size: 8.5px;
       font-weight: 600;
-      padding: 3px 5px;
-      min-width: 18px;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
       text-align: center;
+      box-sizing: border-box;
+      flex-shrink: 0;
     }
     
     .ara-v2-snap-btn:hover {
@@ -708,7 +714,13 @@ const PRESET_RATIOS = [
   { id: "9:21 vertical", ratio: "9:21", desc: "vertical" }
 ];
 
-const SNAP_OPTIONS = [8, 16, 32, 64];
+const SNAP_OPTIONS = ["OFF", 8, 16, 32, 64];
+
+function getSnapValue(snapState) {
+  if (String(snapState).toLowerCase() === "off" || snapState === 1 || snapState === "1") return 1;
+  const parsed = parseInt(snapState);
+  return Number.isNaN(parsed) ? 16 : parsed;
+}
 const QUICK_PICK_WIDTHS = [512, 768, 1024, 1536, 2048];
 const SCALE_ALGORITHMS = ["auto", "nearest exact", "bilinear", "area", "bicubic", "lanczos"];
 
@@ -1100,7 +1112,7 @@ function fitRectToBox(rw, rh, maxW, maxH) {
 // Live calculation matching the python side
 function calculateDims(state, connectedImageSize = null) {
   const mode = state.mode;
-  const snap = parseInt(state.snap) || 16;
+  const snap = getSnapValue(state.snap);
   let w = 1024, h = 1024;
 
   // The following function/section is based on code by Pixaroma
@@ -1515,7 +1527,7 @@ function renderUI(node) {
       {
         min: isMegapixels ? 0.1 : 64,
         max: isMegapixels ? 67.1 : 8192,
-        getStep: () => isMegapixels ? 0.1 : (parseInt(state.snap) || 16),
+        getStep: () => isMegapixels ? 0.1 : getSnapValue(state.snap),
         isMegapixels: isMegapixels
       }
     );
@@ -1533,7 +1545,8 @@ function renderUI(node) {
     SNAP_OPTIONS.forEach((so) => {
       const sbtn = document.createElement("button");
       sbtn.type = "button";
-      sbtn.className = "ara-v2-snap-btn" + (state.snap === so ? " active" : "");
+      const isActive = (state.snap === so) || (String(so).toLowerCase() === "off" && (state.snap === 1 || state.snap === "1" || String(state.snap).toLowerCase() === "off"));
+      sbtn.className = "ara-v2-snap-btn" + (isActive ? " active" : "");
       sbtn.textContent = so;
       sbtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1736,7 +1749,7 @@ function renderUI(node) {
       {
         min: isMegapixels ? 0.1 : 64,
         max: isMegapixels ? 67.1 : 8192,
-        getStep: () => isMegapixels ? 0.1 : (parseInt(state.snap) || 16),
+        getStep: () => isMegapixels ? 0.1 : getSnapValue(state.snap),
         isMegapixels: isMegapixels
       }
     );
@@ -1752,7 +1765,8 @@ function renderUI(node) {
     SNAP_OPTIONS.forEach((so) => {
       const sbtn = document.createElement("button");
       sbtn.type = "button";
-      sbtn.className = "ara-v2-snap-btn" + (state.snap === so ? " active" : "");
+      const isActive = (state.snap === so) || (String(so).toLowerCase() === "off" && (state.snap === 1 || state.snap === "1" || String(state.snap).toLowerCase() === "off"));
+      sbtn.className = "ara-v2-snap-btn" + (isActive ? " active" : "");
       sbtn.textContent = so;
       sbtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1782,7 +1796,8 @@ function renderUI(node) {
     SNAP_OPTIONS.forEach((so) => {
       const sbtn = document.createElement("button");
       sbtn.type = "button";
-      sbtn.className = "ara-v2-snap-btn" + (state.snap === so ? " active" : "");
+      const isActive = (state.snap === so) || (String(so).toLowerCase() === "off" && (state.snap === 1 || state.snap === "1" || String(state.snap).toLowerCase() === "off"));
+      sbtn.className = "ara-v2-snap-btn" + (isActive ? " active" : "");
       sbtn.textContent = so;
       sbtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1857,7 +1872,7 @@ function renderUI(node) {
       {
         min: 64,
         max: 8192,
-        getStep: () => parseInt(state.snap) || 16,
+        getStep: () => getSnapValue(state.snap),
         isMegapixels: false,
         disabled: state.custom_dimensions_input_image
       }
@@ -1902,7 +1917,7 @@ function renderUI(node) {
       {
         min: 64,
         max: 8192,
-        getStep: () => parseInt(state.snap) || 16,
+        getStep: () => getSnapValue(state.snap),
         isMegapixels: false,
         disabled: state.custom_dimensions_input_image
       }

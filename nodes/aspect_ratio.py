@@ -135,8 +135,16 @@ class AspectRatio:
             state = {}
 
         mode = state.get("mode", "preset")
-        snap = int(state.get("snap", 16))
-        if snap not in [8, 16, 32, 64]:
+        snap_raw = state.get("snap", 16)
+        if str(snap_raw).lower() in ["off", "1"] or snap_raw == 1:
+            snap = 1
+        else:
+            try:
+                snap = int(snap_raw)
+            except Exception:
+                snap = 16
+
+        if snap not in [1, 8, 16, 32, 64]:
             snap = 16
 
         w, h = 1024, 1024

@@ -6,10 +6,10 @@ from .nodes.save_images import SaveImages
 from .nodes.frame_save import FrameSave
 from .nodes.save_video import SaveVideo
 from .nodes.load_video import LoadVideo
-from .nodes import user_preset_api
 from .nodes.numbered_text import NumberedText
 from .nodes.text import TextDehypnotic
 from .nodes.sonic_color import SonicColor
+from .nodes import user_preset_api
 from .nodes import sonic_color_api
 
 NODE_CLASS_MAPPINGS = {
