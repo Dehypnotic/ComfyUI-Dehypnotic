@@ -9,6 +9,8 @@ from .nodes.load_video import LoadVideo
 from .nodes import user_preset_api
 from .nodes.numbered_text import NumberedText
 from .nodes.text import TextDehypnotic
+from .nodes.sonic_color import SonicColor
+from .nodes import sonic_color_api
 
 NODE_CLASS_MAPPINGS = {
     "dehypnotic_RangeToString": RangeToString,
@@ -21,7 +23,8 @@ NODE_CLASS_MAPPINGS = {
     "SaveVideoDehypnotic": SaveVideo,
     "LoadVideoDehypnotic": LoadVideo,
     "dehypnotic_NumberedText": NumberedText,
-    "dehypnotic_Text": TextDehypnotic
+    "dehypnotic_Text": TextDehypnotic,
+    "SonicColor": SonicColor
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "dehypnotic_RangeToString": "🧘 RangeToString (Dehypnotic)",
@@ -34,7 +37,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "SaveVideoDehypnotic": "🧘 Save Video (Dehypnotic)",
     "LoadVideoDehypnotic": "🧘 Load Video (Dehypnotic)",
     "dehypnotic_NumberedText": "🧘 NumberedText (Dehypnotic)",
-    "dehypnotic_Text": "🧘 Text (Dehypnotic)"
+    "dehypnotic_Text": "🧘 Text (Dehypnotic)",
+    "SonicColor": "🧘 SonicColor (Dehypnotic)"
 }
 WEB_DIRECTORY = "./js"
+
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]
