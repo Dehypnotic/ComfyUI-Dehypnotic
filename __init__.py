@@ -38,7 +38,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LoadVideoDehypnotic": "🧘 Load Video (Dehypnotic)",
     "dehypnotic_NumberedText": "🧘 NumberedText (Dehypnotic)",
     "dehypnotic_Text": "🧘 Text (Dehypnotic)",
-    "SonicColor": "🧘 SonicColor (Dehypnotic)"
+    "SonicColor": "🧘 SonicColor Noise (Dehypnotic)"
 }
 WEB_DIRECTORY = "./js"
 
