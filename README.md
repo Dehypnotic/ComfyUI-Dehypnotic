@@ -394,6 +394,14 @@ Examples
 - `runs/[model]/[datetime]`
 - `D:/Exports/[env(USERNAME)]/[guid]`
 
+<table style="width:100%">
+  <tr>
+    <th><img width="393" height="544" alt="image" src="https://github.com/user-attachments/assets/2b81c58e-b2a7-4bfb-ad01-f94712c75fd4" /></th>
+    <th><img width="394" height="544" alt="image" src="https://github.com/user-attachments/assets/82636213-0c67-4df9-9559-6d99fa25c9d6" /></th>
+    <th><img width="411" height="556" alt="image" src="https://github.com/user-attachments/assets/c327c9e6-d368-49e2-b23e-6110b5724c4a" /></th>
+  </tr>
+</table>
+
 ---
 
 ## Installation
