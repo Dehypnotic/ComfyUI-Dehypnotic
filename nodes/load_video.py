@@ -35,7 +35,7 @@ class LoadVideo:
     RETURN_TYPES = ("IMAGE", "AUDIO", "FLOAT")
     RETURN_NAMES = ("images", "audio", "fps")
     FUNCTION = "load_video"
-    CATEGORY = "Dehypnotic/IO"
+    CATEGORY = "Dehypnotic/💾 IO"
 
     @classmethod
     def IS_CHANGED(cls, video):
