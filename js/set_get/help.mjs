@@ -2,9 +2,9 @@
 // selection toolbar (convention #16). Registered against the virtual nodes'
 // comfyClass (set in each node's constructor) so the toolbar finds it.
 
-# The following function/section is based on code by Pixaroma
-# MIT License - Copyright (c) 2026 pixaroma
-# Full license terms: https://gitlab.com/pixaroma/comfyui-pixaroma/-/blob/main/LICENSE
+// The following function/section is based on code by Pixaroma
+// MIT License - Copyright (c) 2026 pixaroma
+// Full license terms: https://gitlab.com/pixaroma/comfyui-pixaroma/-/blob/main/LICENSE
 
 import { registerNodeHelp } from "../shared/index.mjs";
 

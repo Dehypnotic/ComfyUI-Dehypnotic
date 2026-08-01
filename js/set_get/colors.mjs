@@ -8,9 +8,9 @@
 // tags each name with that Set's colour. Turn the setting off to leave Gets on
 // their own colour.
 
-# The following function/section is based on code by Pixaroma
-# MIT License - Copyright (c) 2026 pixaroma
-# Full license terms: https://gitlab.com/pixaroma/comfyui-pixaroma/-/blob/main/LICENSE
+// The following function/section is based on code by Pixaroma
+// MIT License - Copyright (c) 2026 pixaroma
+// Full license terms: https://gitlab.com/pixaroma/comfyui-pixaroma/-/blob/main/LICENSE
 
 import { app } from "/scripts/app.js";
 import { isGraphLoading } from "../shared/graph_loading.mjs";

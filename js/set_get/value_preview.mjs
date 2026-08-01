@@ -16,9 +16,9 @@
 //     node body (node grows by one row when shown). Gives exact positioning.
 //   - Nodes 2.0 (Vue): a DOM element row (the grid lays it out tightly).
 
-# The following function/section is based on code by Pixaroma
-# MIT License - Copyright (c) 2026 pixaroma
-# Full license terms: https://gitlab.com/pixaroma/comfyui-pixaroma/-/blob/main/LICENSE
+// The following function/section is based on code by Pixaroma
+// MIT License - Copyright (c) 2026 pixaroma
+// Full license terms: https://gitlab.com/pixaroma/comfyui-pixaroma/-/blob/main/LICENSE
 
 import { app } from "/scripts/app.js";
 import { applyAdaptiveCanvasOnly,
