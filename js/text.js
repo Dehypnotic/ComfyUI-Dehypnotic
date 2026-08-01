@@ -1,6 +1,12 @@
 import { app } from "../../scripts/app.js";
+import { applyAdaptiveCanvasOnly, installCanvasZoomPassthrough, installResizeFloor } from "./shared/index.mjs";
 
 const TEXT_DIR = "Dehypnotic/text";
+const DEFAULT_W = 380;
+const DEFAULT_H = 260;
+const MIN_W = 320;
+const MIN_H = 180;
+const WIDGET_MIN_H = 140;
 
 async function listTextFiles() {
     try {
@@ -47,9 +53,9 @@ async function loadTextFile(filePath) {
     }
 }
 
-
 function createButton(text, onClick, textColor = "#34d399") {
     const btn = document.createElement("button");
+    btn.type = "button";
     btn.textContent = text;
     btn.style.backgroundColor = "#27272a";
     btn.style.border = "1px solid #3f3f46";
@@ -60,7 +66,8 @@ function createButton(text, onClick, textColor = "#34d399") {
     btn.style.fontFamily = "sans-serif";
     btn.style.cursor = "pointer";
     btn.style.transition = "all 0.1s ease";
-    btn.style.flex = "1";
+    btn.style.flex = "1 1 auto";
+    btn.style.userSelect = "none";
     
     btn.addEventListener("mouseover", () => {
         btn.style.backgroundColor = "#3f3f46";
@@ -69,11 +76,16 @@ function createButton(text, onClick, textColor = "#34d399") {
         btn.style.backgroundColor = "#27272a";
         btn.style.color = textColor;
     });
-    btn.addEventListener("mousedown", () => {
+    btn.addEventListener("mousedown", (e) => {
+        e.stopPropagation();
         btn.style.transform = "scale(0.95)";
     });
-    btn.addEventListener("mouseup", () => {
+    btn.addEventListener("mouseup", (e) => {
+        e.stopPropagation();
         btn.style.transform = "scale(1)";
+    });
+    btn.addEventListener("pointerdown", (e) => {
+        e.stopPropagation();
     });
     
     btn.addEventListener("click", (e) => {
@@ -85,25 +97,92 @@ function createButton(text, onClick, textColor = "#34d399") {
     return btn;
 }
 
+function hideNativeTextWidget(node) {
+    let textWidget = null;
+    for (const w of (node.widgets || [])) {
+        if (!w) continue;
+        if (w.name === "text") textWidget = w;
+        w.hidden = true;
+        w.computeSize = () => [0, -4];
+        if (!w.options) w.options = {};
+        w.options.canvasOnly = true;
+        const _el = w.element || w.inputEl;
+        if (_el) _el.style.display = "none";
+    }
+    requestAnimationFrame(() => {
+        for (const w of (node.widgets || [])) {
+            if (!w || w.name === "text_ui") continue;
+            const _el = w.element || w.inputEl;
+            if (_el) _el.style.display = "none";
+        }
+    });
+    return textWidget;
+}
+
+function measureTextFloor(root) {
+    if (!root) return 0;
+    const TAWRAP_MIN = 60;
+    const header = root.querySelector(".dh-text-header");
+    const footer = root.querySelector(".dh-text-footer");
+    const cs = getComputedStyle(root);
+    const gap = parseFloat(cs.rowGap || cs.gap) || 0;
+    const padV = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    let h = TAWRAP_MIN;
+    let count = 1;
+    if (header) { h += header.offsetHeight; count += 1; }
+    if (footer) { h += footer.offsetHeight; count += 1; }
+    if (count > 1) h += gap * (count - 1);
+    return h + padV;
+}
+
 app.registerExtension({
     name: "dehypnotic.Text",
+
+    beforeRegisterNodeDef(nodeType, nodeData) {
+        if (nodeData.name !== "Text" && nodeData.name !== "dehypnotic_Text" && nodeData.name !== "TextDehypnotic") return;
+
+        const origOnResize = nodeType.prototype.onResize;
+        nodeType.prototype.onResize = function (size) {
+            if (!window.LiteGraph?.vueNodesMode) {
+                if (size[0] < MIN_W) size[0] = MIN_W;
+                if (size[1] < MIN_H) size[1] = MIN_H;
+                if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+                if (this.size[1] < MIN_H) this.size[1] = MIN_H;
+            }
+            if (origOnResize) return origOnResize.apply(this, arguments);
+        };
+
+        const origDraw = nodeType.prototype.onDrawForeground;
+        nodeType.prototype.onDrawForeground = function (ctx) {
+            if (origDraw) origDraw.call(this, ctx);
+            if (this.flags?.collapsed) return;
+            if (window.LiteGraph?.vueNodesMode) return;
+            if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+            if (this.size[1] < MIN_H) this.size[1] = MIN_H;
+        };
+
+        const origRemoved = nodeType.prototype.onRemoved;
+        nodeType.prototype.onRemoved = function () {
+            this._dhTextFloorOff?.();
+            this._dhTextFloorOff = null;
+            if (origRemoved) return origRemoved.apply(this, arguments);
+        };
+    },
+
     async nodeCreated(node) {
-        if (node.comfyClass === "Text" || node.comfyClass === "dehypnotic_Text") {
-            const textWidget = node.widgets.find(w => w.name === "text");
+        if (node.comfyClass === "Text" || node.comfyClass === "dehypnotic_Text" || node.comfyClass === "TextDehypnotic") {
+            const textWidget = hideNativeTextWidget(node);
             
             if (textWidget) {
-                textWidget.type = "hidden";
-                textWidget.computeSize = () => [0, 0];
-                if (!textWidget.draw) textWidget.draw = () => {};
-                
                 const hideInput = () => {
-                    if (textWidget.inputEl) {
-                        textWidget.inputEl.style.display = "none";
-                        textWidget.inputEl.style.width = "0px";
-                        textWidget.inputEl.style.height = "0px";
-                        textWidget.inputEl.style.position = "absolute";
-                        textWidget.inputEl.style.opacity = "0";
-                        textWidget.inputEl.style.pointerEvents = "none";
+                    const el = textWidget.element || textWidget.inputEl;
+                    if (el) {
+                        el.style.display = "none";
+                        el.style.width = "0px";
+                        el.style.height = "0px";
+                        el.style.position = "absolute";
+                        el.style.opacity = "0";
+                        el.style.pointerEvents = "none";
                     }
                 };
                 hideInput();
@@ -118,17 +197,18 @@ app.registerExtension({
                 mainContainer.style.display = "flex";
                 mainContainer.style.flexDirection = "column";
                 mainContainer.style.width = "100%";
-                mainContainer.style.height = "calc(100% - 10px)";
-                mainContainer.style.marginTop = "5px";
-                mainContainer.style.marginBottom = "5px";
+                mainContainer.style.height = "100%";
+                mainContainer.style.gap = "4px";
                 mainContainer.style.backgroundColor = "transparent";
                 mainContainer.style.boxSizing = "border-box";
                 mainContainer.style.border = "1px solid #333";
                 mainContainer.style.borderRadius = "4px";
                 mainContainer.style.overflow = "hidden";
+                mainContainer.style.padding = "4px";
 
                 // --- Header Row ---
                 const filePickerRow = document.createElement("div");
+                filePickerRow.className = "dh-text-header";
                 filePickerRow.style.display = "flex";
                 filePickerRow.style.flexDirection = "row";
                 filePickerRow.style.alignItems = "center";
@@ -136,14 +216,18 @@ app.registerExtension({
                 filePickerRow.style.padding = "4px 6px";
                 filePickerRow.style.boxSizing = "border-box";
                 filePickerRow.style.gap = "5px";
+                filePickerRow.style.flexWrap = "wrap";
+                filePickerRow.style.rowGap = "4px";
                 filePickerRow.style.backgroundColor = "#1a1a1a";
                 filePickerRow.style.borderBottom = "1px solid #333";
-                filePickerRow.style.flex = "none";
+                filePickerRow.style.flex = "0 0 auto";
+                filePickerRow.style.userSelect = "none";
 
                 let currentFilePath = "";
                 let currentFileName = "";
 
                 const loadFileBtn = document.createElement("button");
+                loadFileBtn.type = "button";
                 loadFileBtn.textContent = "Load";
                 loadFileBtn.style.backgroundColor = "#27272a";
                 loadFileBtn.style.border = "1px solid #3f3f46";
@@ -155,6 +239,7 @@ app.registerExtension({
                 loadFileBtn.style.flex = "none";
 
                 const saveBtn = document.createElement("button");
+                saveBtn.type = "button";
                 saveBtn.textContent = "Save";
                 saveBtn.style.backgroundColor = "#27272a";
                 saveBtn.style.border = "1px solid #3f3f46";
@@ -166,7 +251,7 @@ app.registerExtension({
                 saveBtn.style.flex = "none";
 
                 const fileSelect = document.createElement("select");
-                fileSelect.style.flex = "1";
+                fileSelect.style.flex = "1 1 100px";
                 fileSelect.style.minWidth = "50px";
                 fileSelect.style.backgroundColor = "#121212";
                 fileSelect.style.color = "#eee";
@@ -182,6 +267,7 @@ app.registerExtension({
                 fileSelect.appendChild(placeholderOpt);
 
                 const deleteFileBtn = document.createElement("button");
+                deleteFileBtn.type = "button";
                 deleteFileBtn.textContent = "Del";
                 deleteFileBtn.style.backgroundColor = "#5c1b1b";
                 deleteFileBtn.style.border = "1px solid #8a2b2b";
@@ -200,15 +286,24 @@ app.registerExtension({
                 filePickerRow.appendChild(deleteFileBtn);
                 mainContainer.appendChild(filePickerRow);
 
+                for (const elem of [loadFileBtn, saveBtn, fileSelect, deleteFileBtn]) {
+                    elem.addEventListener("mousedown", (e) => e.stopPropagation());
+                    elem.addEventListener("pointerdown", (e) => e.stopPropagation());
+                }
+
                 // --- Text Area ---
                 const textAreaContainer = document.createElement("div");
-                textAreaContainer.style.flex = "1";
+                textAreaContainer.className = "dh-text-tawrap";
+                textAreaContainer.style.flex = "1 1 auto";
                 textAreaContainer.style.display = "flex";
                 textAreaContainer.style.position = "relative";
-                textAreaContainer.style.minHeight = "150px";
+                textAreaContainer.style.minHeight = "60px";
+                textAreaContainer.style.width = "100%";
+                textAreaContainer.style.height = "100%";
                 
                 const textarea = document.createElement("textarea");
                 textarea.value = textWidget.value || "";
+                textarea.style.flex = "1 1 auto";
                 textarea.style.width = "100%";
                 textarea.style.height = "100%";
                 textarea.style.background = "#1e1e1e";
@@ -221,8 +316,6 @@ app.registerExtension({
                 textarea.style.resize = "none";
                 textarea.style.boxSizing = "border-box";
                 textarea.style.lineHeight = "1.4";
-                
-                // Allow vertical scrolling
                 textarea.style.overflowY = "auto";
                 textarea.style.overflowX = "hidden";
 
@@ -232,22 +325,29 @@ app.registerExtension({
                     node.trigger("change");
                 });
 
-                textarea.addEventListener("keydown", (event) => {
-                    event.stopPropagation(); // allow hotkeys internally
+                textarea.addEventListener("keydown", (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") return;
+                    e.stopPropagation();
                 });
+                textarea.addEventListener("mousedown", (e) => e.stopPropagation());
+                textarea.addEventListener("pointerdown", (e) => e.stopPropagation());
 
                 textAreaContainer.appendChild(textarea);
                 mainContainer.appendChild(textAreaContainer);
 
                 // --- Footer Row (Copy/Paste) ---
                 const footerRow = document.createElement("div");
+                footerRow.className = "dh-text-footer";
                 footerRow.style.display = "flex";
                 footerRow.style.flexDirection = "row";
                 footerRow.style.gap = "5px";
-                footerRow.style.padding = "6px";
+                footerRow.style.flexWrap = "wrap";
+                footerRow.style.rowGap = "4px";
+                footerRow.style.padding = "4px 6px";
                 footerRow.style.backgroundColor = "#1a1a1a";
                 footerRow.style.borderTop = "1px solid #333";
-                footerRow.style.flex = "none";
+                footerRow.style.flex = "0 0 auto";
+                footerRow.style.userSelect = "none";
 
                 const copyBtn = createButton("Copy", () => {
                     navigator.clipboard.writeText(textarea.value).then(() => {
@@ -430,22 +530,27 @@ app.registerExtension({
                     }
                 });
 
-                // Trigger initial file list load
                 refreshFileList();
 
-                // Custom DOM widget registration
-                const widget = node.addDOMWidget("text_ui", "div", mainContainer, {
-                    getValue() { return textWidget.value; },
+                // Custom DOM widget registration with responsive flex height
+                const widget = node.addDOMWidget("text_ui", "custom", mainContainer, {
+                    getValue() { return textWidget ? textWidget.value : ""; },
                     setValue(v) { 
-                        textWidget.value = v; 
-                        textarea.value = v;
-                    }
+                        if (textWidget) textWidget.value = v; 
+                        if (textarea) textarea.value = v;
+                    },
+                    getMinHeight: () => WIDGET_MIN_H,
+                    margin: 4,
+                    serialize: false,
                 });
                 
-                widget.computeSize = function (width) {
-                    return [width, 360]; // Default height
-                };
-                
+                applyAdaptiveCanvasOnly(widget);
+                installCanvasZoomPassthrough(mainContainer);
+                node._dhTextFloorOff = installResizeFloor(mainContainer, () => measureTextFloor(mainContainer));
+
+                if (node.size[0] < MIN_W) node.size[0] = DEFAULT_W;
+                if (node.size[1] < MIN_H) node.size[1] = DEFAULT_H;
+
                 const updateInputLabel = () => {
                     const textInput = node.inputs?.find(i => i.name === "text_in");
                     if (textInput && textInput.label !== "text") {
@@ -455,11 +560,13 @@ app.registerExtension({
                 
                 updateInputLabel();
                 
-                // Override onConfigure to catch when ComfyUI restores node state
                 const origOnConfigure = node.onConfigure;
                 node.onConfigure = function (info) {
                     origOnConfigure?.apply(this, arguments);
                     updateInputLabel();
+                    if (textWidget && textarea) {
+                        textarea.value = textWidget.value || "";
+                    }
                 };
                 
                 const origOnExecuted = node.onExecuted;

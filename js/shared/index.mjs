@@ -72,4 +72,8 @@ export function registerNodeHelp(comfyClass, helpDef) {
 export function getNodeHelp(comfyClass) {
   return comfyClass ? _nodeHelp.get(comfyClass) || null : null;
 }
+
+export { installResizeFloor, measureRootContent } from "./resize_floor.mjs";
+
 export const PIXAROMA_JS_VERSION = "1.0.0-dehypnotic";
+
