@@ -807,9 +807,8 @@ app.registerExtension({
       width: 100%;
       font-size: 10px;
       color: #a1a1aa;
-      background: rgba(30, 30, 35, 0.4);
-      padding: 5px 8px;
-      border-radius: 4px;
+      background: transparent;
+      padding: 2px 0;
       box-sizing: border-box;
       flex-wrap: wrap;
       flex: 0 0 auto;
