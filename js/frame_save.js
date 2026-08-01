@@ -1,16 +1,36 @@
 import { app } from "../../scripts/app.js";
+import { applyAdaptiveCanvasOnly, installCanvasZoomPassthrough, installResizeFloor } from "./shared/index.mjs";
 
 // ─── Dehypnotic FrameSave Extension ─────────────────────────────────────────
 // Interactive frame selection, start/end frame filtering, frame step interval,
-// custom +/- steppers, live total frame detection, 500px scroll gallery,
+// custom +/- steppers, live total frame detection, responsive scaling gallery,
 // size slider (50px - 250px), mint-green (#34d399) selection borders.
 
 const EXTENSION_NAME = "Dehypnotic.FrameSave";
 const NODE_TYPE = "FrameSaveDehypnotic";
-const GALLERY_HEIGHT = 500;
 const DEFAULT_THUMB_HEIGHT = 100;
 const MINT_GREEN = "#34d399";
-const MIN_NODE_WIDTH = 580;
+const MIN_W = 580;
+const MIN_H = 380;
+const WIDGET_MIN_H = 240;
+
+function measureFrameSaveFloor(root) {
+  if (!root) return 0;
+  const GALLERY_MIN = 80;
+  let h = GALLERY_MIN;
+  let count = 1;
+  for (const child of root.children) {
+    if (child.tagName === "STYLE") continue;
+    if (child.classList?.contains("dh-gallery-scroll")) continue;
+    h += child.offsetHeight || 0;
+    count++;
+  }
+  const cs = getComputedStyle(root);
+  const gap = parseFloat(cs.rowGap || cs.gap) || 0;
+  const padV = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+  if (count > 1) h += gap * (count - 1);
+  return h + padV;
+}
 
 // ── Upstream Source & Frame Count Tracing ───────────────────────────────────
 function getGraphAncestors(graph) {
@@ -464,8 +484,39 @@ function showFolderBrowserModal(initialPath, onSelect) {
 app.registerExtension({
   name: EXTENSION_NAME,
 
+  beforeRegisterNodeDef(nodeType, nodeData) {
+    if (nodeData.name !== NODE_TYPE && nodeData.name !== "FrameSave" && nodeData.name !== "dehypnotic_FrameSave") return;
+
+    const origOnResize = nodeType.prototype.onResize;
+    nodeType.prototype.onResize = function (size) {
+      if (!window.LiteGraph?.vueNodesMode) {
+        if (size[0] < MIN_W) size[0] = MIN_W;
+        if (size[1] < MIN_H) size[1] = MIN_H;
+        if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+        if (this.size[1] < MIN_H) this.size[1] = MIN_H;
+      }
+      if (origOnResize) return origOnResize.apply(this, arguments);
+    };
+
+    const origDraw = nodeType.prototype.onDrawForeground;
+    nodeType.prototype.onDrawForeground = function (ctx) {
+      if (origDraw) origDraw.call(this, ctx);
+      if (this.flags?.collapsed) return;
+      if (window.LiteGraph?.vueNodesMode) return;
+      if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+      if (this.size[1] < MIN_H) this.size[1] = MIN_H;
+    };
+
+    const origRemoved = nodeType.prototype.onRemoved;
+    nodeType.prototype.onRemoved = function () {
+      this._dhFrameSaveFloorOff?.();
+      this._dhFrameSaveFloorOff = null;
+      if (origRemoved) return origRemoved.apply(this, arguments);
+    };
+  },
+
   async nodeCreated(node) {
-    if (node.comfyClass !== NODE_TYPE) return;
+    if (node.comfyClass !== NODE_TYPE && node.comfyClass !== "FrameSave") return;
 
     // Helper to hide native widgets completely
     const hideNativeWidgets = () => {
@@ -484,16 +535,8 @@ app.registerExtension({
     setTimeout(hideNativeWidgets, 10);
     setTimeout(hideNativeWidgets, 100);
 
-    // Minimum visual dimensions
-    const origComputeSize = node.computeSize;
-    node.computeSize = function (out) {
-      const size = origComputeSize ? origComputeSize.apply(this, arguments) : [MIN_NODE_WIDTH, 620];
-      size[0] = Math.max(size[0], MIN_NODE_WIDTH);
-      size[1] = Math.max(size[1], 600);
-      return size;
-    };
-    node.size[0] = Math.max(node.size[0], MIN_NODE_WIDTH);
-    node.size[1] = Math.max(node.size[1], 600);
+    if (node.size[0] < MIN_W) node.size[0] = MIN_W;
+    if (node.size[1] < MIN_H) node.size[1] = 520;
 
     // State for items & slider height
     let currentThumbHeight = DEFAULT_THUMB_HEIGHT;
@@ -505,11 +548,12 @@ app.registerExtension({
       display: flex;
       flex-direction: column;
       width: 100%;
-      min-width: 100%;
+      height: 100%;
       box-sizing: border-box;
       font-family: Inter, Consolas, sans-serif;
       gap: 6px;
       padding: 2px 0;
+      background: transparent;
     `;
 
     // Inject custom scrollbar & stepper styles
@@ -639,7 +683,7 @@ app.registerExtension({
 
     // ── Row 1: Path Input + Folder Browser Modal Button + Save Button ─
     const pathRow = document.createElement("div");
-    pathRow.style.cssText = "display: flex; gap: 4px; align-items: center; width: 100%; box-sizing: border-box;";
+    pathRow.style.cssText = "display: flex; gap: 4px; align-items: center; width: 100%; box-sizing: border-box; flex: 0 0 auto;";
 
     const pathInput = document.createElement("input");
     pathInput.type = "text";
@@ -689,6 +733,7 @@ app.registerExtension({
       overflow: hidden;
       text-overflow: ellipsis;
       padding: 0 2px;
+      flex: 0 0 auto;
     `;
 
     // ── Save action ───────────────────────────────────────────────────
@@ -767,6 +812,7 @@ app.registerExtension({
       border-radius: 4px;
       box-sizing: border-box;
       flex-wrap: wrap;
+      flex: 0 0 auto;
     `;
 
     // Helper for Stepper Groups with [-] and [+] buttons
@@ -911,6 +957,7 @@ app.registerExtension({
       color: #a1a1aa;
       gap: 6px;
       box-sizing: border-box;
+      flex: 0 0 auto;
     `;
 
     // Slider container
@@ -958,14 +1005,13 @@ app.registerExtension({
     controlRow.appendChild(sliderContainer);
     controlRow.appendChild(selControlContainer);
 
-    // ── Row 4: Gallery (Fixed height 500px with scroll, full width) ─────
+    // ── Row 4: Gallery (Flex height with scroll, full width) ─────
     const gallery = document.createElement("div");
     gallery.className = "dh-gallery-scroll";
     gallery.style.cssText = `
       width: 100%;
-      min-width: 100%;
-      max-width: 100%;
-      height: ${GALLERY_HEIGHT}px;
+      height: 100%;
+      min-height: 80px;
       overflow-y: auto;
       overflow-x: hidden;
       background: rgba(0, 0, 0, 0.25);
@@ -977,7 +1023,7 @@ app.registerExtension({
       gap: 6px;
       padding: 6px;
       box-sizing: border-box;
-      flex: 1 1 100%;
+      flex: 1 1 auto;
     `;
 
     const emptyMsg = document.createElement("div");
@@ -1046,9 +1092,18 @@ app.registerExtension({
       app.graph?.setDirtyCanvas(true, true);
     };
 
-    // Add DOM widget to node
-    const domWidget = node.addDOMWidget("dh_framesave_ui", "custom_ui", root);
-    domWidget.computeSize = () => [node.size[0], 600];
+    // Add DOM widget to node with responsive flex height & Pixaroma scaling
+    const domWidget = node.addDOMWidget("dh_framesave_ui", "custom_ui", root, {
+      getValue() { return ""; },
+      setValue() {},
+      getMinHeight: () => WIDGET_MIN_H,
+      margin: 4,
+      serialize: false,
+    });
+
+    applyAdaptiveCanvasOnly(domWidget);
+    installCanvasZoomPassthrough(root);
+    node._dhFrameSaveFloorOff = installResizeFloor(root, () => measureFrameSaveFloor(root));
 
     // References for execution
     node._dhPathInput = pathInput;
@@ -1057,27 +1112,11 @@ app.registerExtension({
     node._dhStepInput = stepInput;
     node._dhGalleryEl = gallery;
 
-    // Helper to keep DOM root width locked to node size at all times
-    const updateRootWidth = () => {
-      if (root && node.size) {
-        const targetW = Math.max(node.size[0] - 20, 540);
-        root.style.width = targetW + "px";
-        root.style.minWidth = targetW + "px";
-      }
-    };
-
-    const origOnResize = node.onResize;
-    node.onResize = function (size) {
-      origOnResize?.apply(this, arguments);
-      updateRootWidth();
-    };
-
-    // Prevent built-in canvas image rendering & lock root width on draw
+    // Prevent built-in canvas image rendering
     const origOnDrawBackground = node.onDrawBackground;
     node.onDrawBackground = function (ctx) {
       this.imgs = null;
       hideNativeWidgets();
-      updateRootWidth();
       updateUpstreamTotalFrames();
       origOnDrawBackground?.apply(this, arguments);
     };
@@ -1087,7 +1126,6 @@ app.registerExtension({
     node.onExecuted = function (message) {
       this.imgs = null;
       hideNativeWidgets();
-      updateRootWidth();
       origOnExecuted?.apply(this, arguments);
 
       const imageInfos = message?.frame_images || message?.images;
@@ -1210,7 +1248,6 @@ app.registerExtension({
     node.onConfigure = function (info) {
       origOnConfigure?.apply(this, arguments);
       hideNativeWidgets();
-      updateRootWidth();
 
       const wPath = node.widgets?.find((w) => w.name === "file_path");
       if (wPath && wPath.value) pathInput.value = wPath.value;
