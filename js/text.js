@@ -218,7 +218,7 @@ app.registerExtension({
                 filePickerRow.style.gap = "5px";
                 filePickerRow.style.flexWrap = "wrap";
                 filePickerRow.style.rowGap = "4px";
-                filePickerRow.style.backgroundColor = "#1a1a1a";
+                filePickerRow.style.backgroundColor = "transparent";
                 filePickerRow.style.borderBottom = "1px solid #333";
                 filePickerRow.style.flex = "0 0 auto";
                 filePickerRow.style.userSelect = "none";
@@ -344,7 +344,7 @@ app.registerExtension({
                 footerRow.style.flexWrap = "wrap";
                 footerRow.style.rowGap = "4px";
                 footerRow.style.padding = "4px 6px";
-                footerRow.style.backgroundColor = "#1a1a1a";
+                footerRow.style.backgroundColor = "transparent";
                 footerRow.style.borderTop = "1px solid #333";
                 footerRow.style.flex = "0 0 auto";
                 footerRow.style.userSelect = "none";

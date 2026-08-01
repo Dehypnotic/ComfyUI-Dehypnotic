@@ -1,4 +1,5 @@
 import { app } from "../../scripts/app.js";
+import { applyAdaptiveCanvasOnly, installCanvasZoomPassthrough, installResizeFloor } from "./shared/index.mjs";
 
 // ---------------------------------------------------------------------------
 // Serialization helpers
@@ -88,13 +89,6 @@ function serializeItems(items) {
 
 const TEXT_DIR = "Dehypnotic/numbered_text";
 
-/**
- * List JSON files in the Dehypnotic/numbered_text userdata directory.
- * Returns an array of { name, path, modified } objects sorted newest first,
- * where `path` is the full relative path from the user root (e.g. "Dehypnotic/numbered_text/foo.json")
- * and `name` is just the base filename without extension.
- * Returns an empty array on error.
- */
 async function listTextFiles() {
     try {
         const resp = await fetch("/dehypnotic/user_text/list?type=numbered_text");
@@ -111,13 +105,6 @@ async function listTextFiles() {
     }
 }
 
-/**
- * Save items to a JSON file under Dehypnotic/numbered_text/<filename>.json
- * Returns true on success, false on failure.
- * @param {string} filename – just the base name, e.g. "my_prompts" (no path, no extension)
- * @param {Array}  items    – array of { checked, text }
- * @param {boolean} overwrite
- */
 async function saveTextFile(filename, items, overwrite = true) {
     const safeFilename = filename.replace(/[/\\:*?"<>|]/g, "_");
     const body = JSON.stringify({ type: "numbered_text", filename: safeFilename, content: { version: 1, items }, overwrite });
@@ -134,11 +121,6 @@ async function saveTextFile(filename, items, overwrite = true) {
     }
 }
 
-/**
- * Load a JSON file.
- * Returns the parsed { version, items } object, or null on error.
- * @param {string} filePath – relative path/filename as returned by the listing API
- */
 async function loadTextFile(filePath) {
     try {
         const resp = await fetch(`/dehypnotic/user_text/load?type=numbered_text&filename=${encodeURIComponent(filePath)}`, { cache: "no-store" });
@@ -186,7 +168,7 @@ function renderList(container, textWidget, node) {
         row.style.backgroundColor = index % 2 === 0 ? "#1e1e1e" : "#2d2d2d";
         row.style.borderBottom = "1px solid #222";
 
-        // Margin container (checkmark & index label) - reduced padding
+        // Margin container (checkmark & index label)
         const margin = document.createElement("div");
         margin.style.display = "flex";
         margin.style.alignItems = "center";
@@ -211,8 +193,10 @@ function renderList(container, textWidget, node) {
             item.checked = checkbox.checked;
             updateWidgetValue();
         });
+        checkbox.addEventListener("mousedown", (e) => e.stopPropagation());
+        checkbox.addEventListener("pointerdown", (e) => e.stopPropagation());
 
-        // Index Label - reduced font size
+        // Index Label
         const label = document.createElement("span");
         label.textContent = `${index + 1}.`;
         label.style.color = "#888";
@@ -230,7 +214,7 @@ function renderList(container, textWidget, node) {
         textContainer.style.display = "flex";
         textContainer.style.alignItems = "center";
 
-        // Textarea - reduced padding, font size, and line-height
+        // Textarea
         const textarea = document.createElement("textarea");
         textarea.value = item.text;
         textarea.rows = 1;
@@ -251,7 +235,6 @@ function renderList(container, textWidget, node) {
         const resizeTextarea = () => {
             textarea.style.height = "auto";
             textarea.style.height = `${textarea.scrollHeight}px`;
-            // Request canvas redraw without changing the node window size
             node.setDirtyCanvas(true, true);
         };
 
@@ -262,18 +245,19 @@ function renderList(container, textWidget, node) {
             resizeTextarea();
         });
 
+        textarea.addEventListener("mousedown", (e) => e.stopPropagation());
+        textarea.addEventListener("pointerdown", (e) => e.stopPropagation());
+
         // Keydown handlers
         textarea.addEventListener("keydown", (event) => {
-            event.stopPropagation(); // Stop propagation to prevent LiteGraph canvas hotkeys (like minimize)
+            event.stopPropagation(); // Stop propagation to prevent LiteGraph canvas hotkeys
             if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
 
-                // Add new item below this one (default to unchecked/false)
                 items.splice(index + 1, 0, { checked: false, text: "" });
                 textWidget.value = serializeItems(items);
                 renderList(container, textWidget, node);
 
-                // Focus the newly created textarea
                 setTimeout(() => {
                     const nextRow = container.children[index + 1];
                     if (nextRow) {
@@ -284,7 +268,6 @@ function renderList(container, textWidget, node) {
                     }
                 }, 10);
             } else if (event.key === "Backspace" && textarea.selectionStart === 0 && textarea.selectionEnd === 0) {
-                // Delete current item if empty (or join with previous item)
                 if (textarea.value === "" && items.length > 1) {
                     event.preventDefault();
 
@@ -292,14 +275,12 @@ function renderList(container, textWidget, node) {
                     textWidget.value = serializeItems(items);
                     renderList(container, textWidget, node);
 
-                    // Focus the previous textarea
                     setTimeout(() => {
                         const prevRow = container.children[index - 1];
                         if (prevRow) {
                             const prevTextarea = prevRow.querySelector("textarea");
                             if (prevTextarea) {
                                 prevTextarea.focus();
-                                // Position caret at the end
                                 const len = prevTextarea.value.length;
                                 prevTextarea.setSelectionRange(len, len);
                             }
@@ -350,10 +331,8 @@ function renderList(container, textWidget, node) {
         row.appendChild(textContainer);
         container.appendChild(row);
 
-        // Run initial resize
         setTimeout(resizeTextarea, 0);
 
-        // Observe textarea resizing (like when user resizes node width) to auto-adjust height
         try {
             const ro = new ResizeObserver(() => {
                 resizeTextarea();
@@ -376,63 +355,117 @@ function renderList(container, textWidget, node) {
     }
 }
 
+function measureNumberedTextFloor(root) {
+    if (!root) return 0;
+    const LIST_MIN = 80;
+    const header = root.querySelector(".dh-numtext-header");
+    const buttons = root.querySelector(".dh-numtext-buttons");
+    const swap = root.querySelector(".dh-numtext-swap");
+    const cs = getComputedStyle(root);
+    const gap = parseFloat(cs.rowGap || cs.gap) || 0;
+    const padV = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    let h = LIST_MIN;
+    let count = 1;
+    if (header) { h += header.offsetHeight; count += 1; }
+    if (buttons) { h += buttons.offsetHeight; count += 1; }
+    if (swap) { h += swap.offsetHeight; count += 1; }
+    if (count > 1) h += gap * (count - 1);
+    return h + padV;
+}
+
 // ---------------------------------------------------------------------------
 // Extension registration
 // ---------------------------------------------------------------------------
 
+const MIN_W = 360;
+const MIN_H = 220;
+const DEFAULT_W = 400;
+const DEFAULT_H = 480;
+const WIDGET_MIN_H = 180;
+
 app.registerExtension({
     name: "dehypnotic.NumberedText",
+
+    beforeRegisterNodeDef(nodeType, nodeData) {
+        if (nodeData.name !== "NumberedText" && nodeData.name !== "dehypnotic_NumberedText") return;
+
+        const origOnResize = nodeType.prototype.onResize;
+        nodeType.prototype.onResize = function (size) {
+            if (!window.LiteGraph?.vueNodesMode) {
+                if (size[0] < MIN_W) size[0] = MIN_W;
+                if (size[1] < MIN_H) size[1] = MIN_H;
+                if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+                if (this.size[1] < MIN_H) this.size[1] = MIN_H;
+            }
+            if (origOnResize) return origOnResize.apply(this, arguments);
+        };
+
+        const origDraw = nodeType.prototype.onDrawForeground;
+        nodeType.prototype.onDrawForeground = function (ctx) {
+            if (origDraw) origDraw.call(this, ctx);
+            if (this.flags?.collapsed) return;
+            if (window.LiteGraph?.vueNodesMode) return;
+            if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+            if (this.size[1] < MIN_H) this.size[1] = MIN_H;
+        };
+
+        const origRemoved = nodeType.prototype.onRemoved;
+        nodeType.prototype.onRemoved = function () {
+            this._dhNumTextFloorOff?.();
+            this._dhNumTextFloorOff = null;
+            if (origRemoved) return origRemoved.apply(this, arguments);
+        };
+    },
+
     async nodeCreated(node) {
         if (node.comfyClass === "NumberedText" || node.comfyClass === "dehypnotic_NumberedText") {
             const textWidget = node.widgets.find(w => w.name === "text");
             const separatorWidget = node.widgets.find(w => w.name === "separator");
             if (separatorWidget) {
                 separatorWidget.type = "hidden";
-                separatorWidget.computeSize = () => [0, 0];
-                if (!separatorWidget.draw) {
-                    separatorWidget.draw = function (ctx, node, widget_width, y, widget_height) { };
-                }
+                separatorWidget.computeSize = () => [0, -4];
+                if (!separatorWidget.options) separatorWidget.options = {};
+                separatorWidget.options.canvasOnly = true;
+                if (!separatorWidget.draw) separatorWidget.draw = function () { };
             }
             if (textWidget) {
                 textWidget.type = "hidden";
-                textWidget.computeSize = () => [0, 0];
-                if (!textWidget.draw) {
-                    textWidget.draw = function (ctx, node, widget_width, y, widget_height) { };
-                }
+                textWidget.computeSize = () => [0, -4];
+                if (!textWidget.options) textWidget.options = {};
+                textWidget.options.canvasOnly = true;
+                if (!textWidget.draw) textWidget.draw = function () { };
 
-                // Completely hide the original textarea and inputs to avoid duplicates
                 const hideInput = () => {
-                    if (textWidget.inputEl) {
-                        textWidget.inputEl.style.display = "none";
-                        textWidget.inputEl.style.width = "0px";
-                        textWidget.inputEl.style.height = "0px";
-                        textWidget.inputEl.style.position = "absolute";
-                        textWidget.inputEl.style.opacity = "0";
-                        textWidget.inputEl.style.pointerEvents = "none";
+                    const tEl = textWidget.element || textWidget.inputEl;
+                    if (tEl) {
+                        tEl.style.display = "none";
+                        tEl.style.width = "0px";
+                        tEl.style.height = "0px";
+                        tEl.style.position = "absolute";
+                        tEl.style.opacity = "0";
+                        tEl.style.pointerEvents = "none";
                     }
-                    if (separatorWidget && separatorWidget.inputEl) {
-                        separatorWidget.inputEl.style.display = "none";
-                        separatorWidget.inputEl.style.width = "0px";
-                        separatorWidget.inputEl.style.height = "0px";
-                        separatorWidget.inputEl.style.position = "absolute";
-                        separatorWidget.inputEl.style.opacity = "0";
-                        separatorWidget.inputEl.style.pointerEvents = "none";
+                    const sEl = separatorWidget?.element || separatorWidget?.inputEl;
+                    if (sEl) {
+                        sEl.style.display = "none";
+                        sEl.style.width = "0px";
+                        sEl.style.height = "0px";
+                        sEl.style.position = "absolute";
+                        sEl.style.opacity = "0";
+                        sEl.style.pointerEvents = "none";
                     }
                 };
                 hideInput();
 
-                // Fallback shown listener to ensure it gets hidden
                 const origOnShown = node.onShown;
                 node.onShown = function () {
                     origOnShown?.apply(this, arguments);
                     hideInput();
                 };
 
-                // ---------------------------------------------------------------
-                // File picker row  (load dropdown – displayed above the list)
-                // ---------------------------------------------------------------
-
+                // --- File picker row ---
                 const filePickerRow = document.createElement("div");
+                filePickerRow.className = "dh-numtext-header";
                 filePickerRow.style.display = "flex";
                 filePickerRow.style.flexDirection = "row";
                 filePickerRow.style.alignItems = "center";
@@ -440,14 +473,15 @@ app.registerExtension({
                 filePickerRow.style.padding = "4px 6px";
                 filePickerRow.style.boxSizing = "border-box";
                 filePickerRow.style.gap = "5px";
-                filePickerRow.style.backgroundColor = "#1a1a1a";
+                filePickerRow.style.flexWrap = "wrap";
+                filePickerRow.style.rowGap = "4px";
+                filePickerRow.style.backgroundColor = "transparent";
                 filePickerRow.style.borderBottom = "1px solid #333";
-                filePickerRow.style.borderTopLeftRadius = "4px";
-                filePickerRow.style.borderTopRightRadius = "4px";
+                filePickerRow.style.flex = "0 0 auto";
+                filePickerRow.style.userSelect = "none";
 
-                // "Load" button — acts as both label and trigger.
-                // Reads fileSelect.value at click time — works for any file, same or different.
                 const loadFileBtn = document.createElement("button");
+                loadFileBtn.type = "button";
                 loadFileBtn.textContent = "Load";
                 loadFileBtn.title = "Load selected file into list";
                 loadFileBtn.style.backgroundColor = "#27272a";
@@ -460,6 +494,7 @@ app.registerExtension({
                 loadFileBtn.style.cursor = "pointer";
                 loadFileBtn.style.whiteSpace = "nowrap";
                 loadFileBtn.style.transition = "background 0.15s, border-color 0.15s";
+                loadFileBtn.style.flex = "none";
 
                 loadFileBtn.addEventListener("mouseover", () => {
                     loadFileBtn.style.backgroundColor = "rgba(16, 185, 129, 0.12)";
@@ -471,7 +506,8 @@ app.registerExtension({
                 });
 
                 const fileSelect = document.createElement("select");
-                fileSelect.style.flex = "1";
+                fileSelect.style.flex = "1 1 100px";
+                fileSelect.style.minWidth = "50px";
                 fileSelect.style.backgroundColor = "#2d2d2d";
                 fileSelect.style.border = "1px solid #555";
                 fileSelect.style.borderRadius = "3px";
@@ -481,17 +517,14 @@ app.registerExtension({
                 fileSelect.style.cursor = "pointer";
                 fileSelect.style.outline = "none";
 
-                // Placeholder option
                 const placeholderOpt = document.createElement("option");
                 placeholderOpt.value = "";
                 placeholderOpt.textContent = "— New file —";
                 fileSelect.appendChild(placeholderOpt);
 
-                // Currently selected file path (set after save to enable direct-save)
-                let currentFilePath = "";   // e.g. "Dehypnotic/numbered_text/foo.json"
-                let currentFileName = "";   // e.g. "foo" (without extension)
+                let currentFilePath = "";
+                let currentFileName = "";
 
-                // Populate dropdown with JSON files from userdata
                 async function refreshFileList(selectValue) {
                     const files = await listTextFiles();
                     while (fileSelect.options.length > 1) {
@@ -508,25 +541,19 @@ app.registerExtension({
                     }
                 }
 
-                // Delete-file button — declared before loadSelectedFile to avoid TDZ.
                 const deleteFileBtn = document.createElement("button");
+                deleteFileBtn.type = "button";
 
-                // ---------------------------------------------------------------
-                // Load logic — only ever called from the Load button click.
-                // The dropdown change event does NOT trigger any loading.
-                // ---------------------------------------------------------------
                 async function loadSelectedFile(selected) {
                     if (!selected) return;
 
                     const baseName = selected.replace(/^.*[\/\\]/, "").replace(/\.json$/i, "");
-
                     const data = await loadTextFile(selected);
                     if (!data || !Array.isArray(data.items)) {
                         alert("Failed to load file or invalid format.");
                         return;
                     }
 
-                    // Append from first free slot, or replace if list is empty/blank
                     const existingItems = parseSerializedText(textWidget.value || "");
                     const isEffectivelyEmpty =
                         existingItems.length === 0 ||
@@ -539,19 +566,16 @@ app.registerExtension({
                     textWidget.value = serializeItems(mergedItems);
                     renderList(listContainer, textWidget, node);
 
-                    // Remember for direct-save
                     currentFilePath = selected;
                     currentFileName = baseName;
                     deleteFileBtn.disabled = false;
                     deleteFileBtn.style.opacity = "1";
                 }
 
-                // Load button click — the one and only way to trigger loading.
                 loadFileBtn.addEventListener("click", async () => {
                     await loadSelectedFile(fileSelect.value);
                 });
 
-                // Dropdown change enables/disables the Del button and updates current selection for Save
                 fileSelect.addEventListener("change", () => {
                     const selected = fileSelect.value;
                     deleteFileBtn.disabled = !selected;
@@ -566,7 +590,6 @@ app.registerExtension({
                     }
                 });
 
-                // Delete-file button styling and event listeners
                 deleteFileBtn.textContent = "Del";
                 deleteFileBtn.title = "Delete selected file from disk";
                 deleteFileBtn.disabled = true;
@@ -581,6 +604,7 @@ app.registerExtension({
                 deleteFileBtn.style.whiteSpace = "nowrap";
                 deleteFileBtn.style.opacity = "0.4";
                 deleteFileBtn.style.transition = "background 0.15s, border-color 0.15s, opacity 0.15s";
+                deleteFileBtn.style.flex = "none";
 
                 deleteFileBtn.addEventListener("mouseover", () => {
                     if (!deleteFileBtn.disabled) {
@@ -624,75 +648,75 @@ app.registerExtension({
                 filePickerRow.appendChild(loadFileBtn);
                 filePickerRow.appendChild(fileSelect);
                 filePickerRow.appendChild(deleteFileBtn);
-                // NOTE: saveBtn is appended to filePickerRow below, after it is declared.
 
+                for (const elem of [loadFileBtn, fileSelect, deleteFileBtn]) {
+                    elem.addEventListener("mousedown", (e) => e.stopPropagation());
+                    elem.addEventListener("pointerdown", (e) => e.stopPropagation());
+                }
 
-                // Auto-refresh every 30 seconds
                 const refreshInterval = setInterval(() => {
                     refreshFileList(currentFilePath || fileSelect.value);
                 }, 30000);
 
-                // Initial populate (async, non-blocking)
                 refreshFileList("");
 
-                // ---------------------------------------------------------------
-                // Create parent container (flexbox to hold file picker, list, buttons)
-                // ---------------------------------------------------------------
-
+                // --- Parent Container (Flexbox) ---
                 const parentContainer = document.createElement("div");
+                parentContainer.className = "dh-numtext-root";
                 parentContainer.style.display = "flex";
                 parentContainer.style.flexDirection = "column";
                 parentContainer.style.width = "100%";
+                parentContainer.style.height = "100%";
+                parentContainer.style.gap = "4px";
                 parentContainer.style.backgroundColor = "transparent";
+                parentContainer.style.boxSizing = "border-box";
                 parentContainer.style.border = "1px solid #333";
                 parentContainer.style.borderRadius = "4px";
-                parentContainer.style.marginTop = "5px";
-                parentContainer.style.marginBottom = "5px";
+                parentContainer.style.overflow = "hidden";
+                parentContainer.style.padding = "4px";
 
-                // Create custom list container
+                // --- Dynamic List Container ---
                 const listContainer = document.createElement("div");
                 listContainer.style.display = "flex";
                 listContainer.style.flexDirection = "column";
                 listContainer.style.width = "100%";
+                listContainer.style.flex = "1 1 auto";
+                listContainer.style.height = "100%";
+                listContainer.style.minHeight = "80px";
                 listContainer.style.overflowY = "auto";
-                listContainer.style.height = "300px";
-                listContainer.style.maxHeight = "300px";
                 listContainer.style.backgroundColor = "#151515";
 
-                // Create horizontal button container
+                // --- Button Container ---
                 const buttonContainer = document.createElement("div");
+                buttonContainer.className = "dh-numtext-buttons";
                 buttonContainer.style.display = "flex";
                 buttonContainer.style.flexDirection = "row";
                 buttonContainer.style.flexWrap = "wrap";
                 buttonContainer.style.justifyContent = "space-between";
-                buttonContainer.style.padding = "5px";
+                buttonContainer.style.padding = "4px 6px";
                 buttonContainer.style.gap = "4px";
+                buttonContainer.style.rowGap = "4px";
                 buttonContainer.style.borderTop = "1px solid #333";
                 buttonContainer.style.backgroundColor = "transparent";
+                buttonContainer.style.flex = "0 0 auto";
+                buttonContainer.style.userSelect = "none";
 
-                // Stop mouse/pointer/keyboard event propagation to prevent canvas interactions/collapsing
-                const blockEvents = ["mousedown", "mouseup", "click", "dblclick", "contextmenu", "pointerdown", "pointerup", "pointermove", "keydown", "keyup", "keypress"];
-                blockEvents.forEach(evt => {
-                    parentContainer.addEventListener(evt, (e) => {
-                        e.stopPropagation();
-                    });
-                });
-
-                // Create swap row container
+                // --- Swap Row ---
                 const swapRow = document.createElement("div");
+                swapRow.className = "dh-numtext-swap";
                 swapRow.style.display = "flex";
                 swapRow.style.flexDirection = "row";
                 swapRow.style.flexWrap = "wrap";
                 swapRow.style.alignItems = "center";
                 swapRow.style.justifyContent = "center";
-                swapRow.style.padding = "5px 8px";
-                swapRow.style.gap = "8px";
+                swapRow.style.padding = "4px 6px";
+                swapRow.style.gap = "6px";
+                swapRow.style.rowGap = "4px";
                 swapRow.style.borderTop = "1px solid #333";
                 swapRow.style.backgroundColor = "transparent";
-                swapRow.style.borderBottomLeftRadius = "4px";
-                swapRow.style.borderBottomRightRadius = "4px";
+                swapRow.style.flex = "0 0 auto";
+                swapRow.style.userSelect = "none";
 
-                // Helper to create styled stepper
                 const createStepper = (inputClass) => {
                     const wrap = document.createElement("div");
                     wrap.style.display = "flex";
@@ -701,6 +725,7 @@ app.registerExtension({
                     wrap.style.gap = "2px";
 
                     const decBtn = document.createElement("button");
+                    decBtn.type = "button";
                     decBtn.textContent = "-";
                     decBtn.style.width = "16px";
                     decBtn.style.height = "16px";
@@ -727,6 +752,8 @@ app.registerExtension({
                         decBtn.style.borderColor = "#3f3f46";
                         decBtn.style.color = "#34d399";
                     });
+                    decBtn.addEventListener("mousedown", (e) => e.stopPropagation());
+                    decBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
 
                     const input = document.createElement("input");
                     input.className = inputClass;
@@ -744,8 +771,11 @@ app.registerExtension({
                     input.style.mozAppearance = "textfield";
                     input.style.webkitAppearance = "none";
                     input.style.margin = "0";
+                    input.addEventListener("mousedown", (e) => e.stopPropagation());
+                    input.addEventListener("pointerdown", (e) => e.stopPropagation());
 
                     const incBtn = document.createElement("button");
+                    incBtn.type = "button";
                     incBtn.textContent = "+";
                     incBtn.style.width = "16px";
                     incBtn.style.height = "16px";
@@ -772,6 +802,8 @@ app.registerExtension({
                         incBtn.style.borderColor = "#3f3f46";
                         incBtn.style.color = "#34d399";
                     });
+                    incBtn.addEventListener("mousedown", (e) => e.stopPropagation());
+                    incBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
 
                     decBtn.addEventListener("click", () => {
                         let val = parseInt(input.value, 10);
@@ -795,7 +827,6 @@ app.registerExtension({
                     return { wrap, input };
                 };
 
-                // Hide webkit spinner style
                 if (!document.getElementById("swap-stepper-style")) {
                     const style = document.createElement("style");
                     style.id = "swap-stepper-style";
@@ -821,11 +852,11 @@ app.registerExtension({
 
                 const toStepper = createStepper("swap-to-input");
 
-                // Bind inputs to listContainer so renderList can dynamically set their max attribute
                 listContainer.fromInput = fromStepper.input;
                 listContainer.toInput = toStepper.input;
 
                 const swapBtn = document.createElement("button");
+                swapBtn.type = "button";
                 swapBtn.textContent = "Swap";
                 swapBtn.style.backgroundColor = "#27272a";
                 swapBtn.style.border = "1px solid #3f3f46";
@@ -837,6 +868,8 @@ app.registerExtension({
                 swapBtn.style.cursor = "pointer";
                 swapBtn.style.marginLeft = "4px";
                 swapBtn.style.transition = "background 0.15s, border-color 0.15s, color 0.15s";
+                swapBtn.addEventListener("mousedown", (e) => e.stopPropagation());
+                swapBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
 
                 swapBtn.addEventListener("mouseover", () => {
                     if (swapBtn.style.backgroundColor !== "rgb(43, 94, 43)" && swapBtn.style.backgroundColor !== "rgb(150, 40, 40)") {
@@ -861,7 +894,6 @@ app.registerExtension({
                     const items = parseSerializedText(currentText);
 
                     if (isNaN(fromVal) || isNaN(toVal) || fromVal < 1 || toVal < 1 || fromVal > items.length || toVal > items.length) {
-                        // Flash red on error
                         swapBtn.textContent = "Error!";
                         swapBtn.style.backgroundColor = "#962828";
                         swapBtn.style.color = "#fff";
@@ -874,7 +906,6 @@ app.registerExtension({
                         return;
                     }
 
-                    // Swap the items
                     const idxA = fromVal - 1;
                     const idxB = toVal - 1;
                     const temp = items[idxA];
@@ -884,12 +915,10 @@ app.registerExtension({
                     textWidget.value = serializeItems(items);
                     renderList(listContainer, textWidget, node);
 
-                    // Flash green on success
                     swapBtn.textContent = "Swapped!";
                     swapBtn.style.backgroundColor = "#2b5e2b";
                     swapBtn.style.color = "#fff";
 
-                    // Clear inputs
                     fromStepper.input.value = "";
                     toStepper.input.value = "";
 
@@ -901,19 +930,18 @@ app.registerExtension({
                     }, 1000);
                 });
 
-                // Custom Separator Input on the right of the Swap button
                 const sepLabel = document.createElement("span");
                 sepLabel.textContent = "Separator:";
                 sepLabel.style.color = "#888";
                 sepLabel.style.fontSize = "10px";
                 sepLabel.style.fontFamily = "sans-serif";
                 sepLabel.style.userSelect = "none";
-                sepLabel.style.marginLeft = "12px";
+                sepLabel.style.marginLeft = "6px";
 
                 const sepInput = document.createElement("input");
                 sepInput.type = "text";
                 sepInput.placeholder = ", ";
-                sepInput.style.width = "64px";
+                sepInput.style.width = "48px";
                 sepInput.style.backgroundColor = "#2d2d2d";
                 sepInput.style.border = "1px solid #555";
                 sepInput.style.borderRadius = "3px";
@@ -921,6 +949,8 @@ app.registerExtension({
                 sepInput.style.fontSize = "10px";
                 sepInput.style.padding = "2px 4px";
                 sepInput.style.textAlign = "center";
+                sepInput.addEventListener("mousedown", (e) => e.stopPropagation());
+                sepInput.addEventListener("pointerdown", (e) => e.stopPropagation());
 
                 if (separatorWidget) {
                     sepInput.value = separatorWidget.value || ", ";
@@ -941,44 +971,24 @@ app.registerExtension({
                 swapRow.appendChild(sepLabel);
                 swapRow.appendChild(sepInput);
 
-                parentContainer.appendChild(filePickerRow);
-                parentContainer.appendChild(listContainer);
-                parentContainer.appendChild(buttonContainer);
-                parentContainer.appendChild(swapRow);
-
-                const domWidget = node.addDOMWidget("custom_numbered_text", "custom_ui", parentContainer);
-                domWidget.computeSize = function () {
-                    // Keep widget size stable based on node's current width, dynamic height based on button and swap row wrap
-                    const width = node.size ? Math.max(350, node.size[0]) : 400;
-                    const btnHeight = buttonContainer.clientHeight || 32;
-                    const swapHeight = swapRow.clientHeight || 26;
-                    const filePickerHeight = filePickerRow.clientHeight || 28;
-                    return [width, filePickerHeight + 305 + btnHeight + swapHeight + 10];
-                };
-
-                // Set initial size of the node window
-                if (!node.size || node.size[1] < 100) {
-                    node.size = [400, 510];
-                }
-
-                // ---------------------------------------------------------------
-                // Button helper function
-                // ---------------------------------------------------------------
+                // --- Button Helper ---
                 const createButton = (text, onClick) => {
                     const btn = document.createElement("button");
+                    btn.type = "button";
                     btn.textContent = text;
-                    btn.style.flex = "1";
+                    btn.style.flex = "1 1 auto";
                     btn.style.backgroundColor = "#27272a";
                     btn.style.border = "1px solid #3f3f46";
                     btn.style.borderRadius = "3px";
                     btn.style.color = "#34d399";
-                    btn.style.padding = "4px 2px";
+                    btn.style.padding = "4px 6px";
                     btn.style.fontSize = "9.5px";
                     btn.style.fontFamily = "sans-serif";
                     btn.style.cursor = "pointer";
                     btn.style.whiteSpace = "nowrap";
                     btn.style.textAlign = "center";
                     btn.style.transition = "background 0.15s, border-color 0.15s, color 0.15s";
+                    btn.style.userSelect = "none";
 
                     btn.addEventListener("mouseover", () => {
                         btn.style.backgroundColor = "rgba(16, 185, 129, 0.12)";
@@ -990,18 +1000,16 @@ app.registerExtension({
                         btn.style.borderColor = "#3f3f46";
                         btn.style.color = "#34d399";
                     });
+                    btn.addEventListener("mousedown", (e) => e.stopPropagation());
+                    btn.addEventListener("pointerdown", (e) => e.stopPropagation());
                     btn.addEventListener("click", onClick);
                     return btn;
                 };
 
-                // Helper to unescape delimiter characters
                 const unescapeString = (str) => {
                     return str.replace(/\\n/g, "\n").replace(/\\t/g, "\t").replace(/\\r/g, "\r");
                 };
 
-                // ---------------------------------------------------------------
-                // Delete button  (was "Delete Checked")
-                // ---------------------------------------------------------------
                 const deleteBtn = createButton("Delete Checked", () => {
                     const currentText = textWidget.value || "";
                     let items = parseSerializedText(currentText);
@@ -1013,9 +1021,6 @@ app.registerExtension({
                     renderList(listContainer, textWidget, node);
                 });
 
-                // ---------------------------------------------------------------
-                // Copy button  (was "Copy Checked")
-                // ---------------------------------------------------------------
                 const copyBtn = createButton("Copy Checked", () => {
                     const currentText = textWidget.value || "";
                     const items = parseSerializedText(currentText);
@@ -1061,9 +1066,6 @@ app.registerExtension({
                     });
                 });
 
-                // ---------------------------------------------------------------
-                // Check All / Uncheck All
-                // ---------------------------------------------------------------
                 const checkAllBtn = createButton("Check All", () => {
                     const currentText = textWidget.value || "";
                     const items = parseSerializedText(currentText);
@@ -1080,13 +1082,9 @@ app.registerExtension({
                     renderList(listContainer, textWidget, node);
                 });
 
-                // ---------------------------------------------------------------
-                // Save button
-                // ---------------------------------------------------------------
                 const saveBtn = createButton("Save", async () => {
                     const items = parseSerializedText(textWidget.value || "");
 
-                    // If a file is already selected in the dropdown, save directly
                     if (currentFilePath) {
                         saveBtn.textContent = "Saving…";
                         saveBtn.style.backgroundColor = "#1e3a5f";
@@ -1110,17 +1108,14 @@ app.registerExtension({
                         return;
                     }
 
-                    // No file selected – prompt for a filename
                     let filename = prompt("Enter file name to save (without extension):");
                     if (!filename) return;
                     filename = filename.trim();
                     if (!filename) return;
 
-                    // Sanitise the name slightly for display
                     const safeBase = filename.replace(/[/\\:*?"<>|]/g, "_");
                     const proposedPath = `${safeBase}.json`;
 
-                    // Check if the file already exists (look in the dropdown options)
                     const existingPaths = Array.from(fileSelect.options).map(o => o.value);
                     const alreadyExists = existingPaths.includes(proposedPath);
 
@@ -1152,7 +1147,6 @@ app.registerExtension({
                     }, 1500);
                 });
 
-                // Override mouseout for saveBtn to avoid green flash during feedback
                 saveBtn.addEventListener("mouseout", () => {
                     if (!["Saved!", "Saving…", "Error!"].includes(saveBtn.textContent)) {
                         saveBtn.style.backgroundColor = "#27272a";
@@ -1160,10 +1154,7 @@ app.registerExtension({
                     }
                 });
 
-                // Fix flex so Save doesn't stretch in the file-picker row
                 saveBtn.style.flex = "none";
-
-                // Insert Save into the file-picker row between Load and the dropdown
                 filePickerRow.insertBefore(saveBtn, fileSelect);
 
                 buttonContainer.appendChild(deleteBtn);
@@ -1171,24 +1162,38 @@ app.registerExtension({
                 buttonContainer.appendChild(checkAllBtn);
                 buttonContainer.appendChild(uncheckAllBtn);
 
+                parentContainer.appendChild(filePickerRow);
+                parentContainer.appendChild(listContainer);
+                parentContainer.appendChild(buttonContainer);
+                parentContainer.appendChild(swapRow);
+
                 renderList(listContainer, textWidget, node);
 
-                // Override onConfigure to catch when ComfyUI restores node state (workflow load/refresh/copy-paste/undo-redo)
+                // Register responsive DOM widget
+                const domWidget = node.addDOMWidget("custom_numbered_text", "custom_ui", parentContainer, {
+                    getValue() { return textWidget ? textWidget.value : ""; },
+                    setValue(v) {
+                        if (textWidget) textWidget.value = v;
+                        renderList(listContainer, textWidget, node);
+                    },
+                    getMinHeight: () => WIDGET_MIN_H,
+                    margin: 4,
+                    serialize: false,
+                });
+
+                applyAdaptiveCanvasOnly(domWidget);
+                installCanvasZoomPassthrough(parentContainer);
+                node._dhNumTextFloorOff = installResizeFloor(parentContainer, () => measureNumberedTextFloor(parentContainer));
+
+                if (!node.size || node.size[0] < MIN_W) node.size[0] = DEFAULT_W;
+                if (!node.size || node.size[1] < MIN_H) node.size[1] = DEFAULT_H;
+
                 const origOnConfigure = node.onConfigure;
                 node.onConfigure = function (info) {
                     origOnConfigure?.apply(this, arguments);
                     renderList(listContainer, textWidget, node);
-                    // Force node to snap to correct height after workflow restores a (possibly larger) saved size.
-                    // Preserve the saved width so the node doesn't become too narrow — only the height is corrected.
-                    setTimeout(() => {
-                        const targetSize = node.computeSize();
-                        const savedWidth = node.size[0];
-                        node.setSize([Math.max(savedWidth, targetSize[0]), targetSize[1]]);
-                        app.graph.setDirtyCanvas(true, true);
-                    }, 50);
                 };
 
-                // Clean up interval when node is removed
                 const origOnRemoved = node.onRemoved;
                 node.onRemoved = function () {
                     origOnRemoved?.apply(this, arguments);
