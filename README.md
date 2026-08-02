@@ -91,7 +91,7 @@ A prompt management and text block organizer node. Allows writing multi-line tex
 - **Selective Output**: Toggle checkboxes (`[x]` / `[ ]`) next to numbered items. Only checked text items are combined and output.
 - **Preset Management**: Save and load your text lists as `.json` files directly from the UI. A dropdown picker lets you easily load, update, or delete saved files. Automatically creates and stores files under `ComfyUI/user/Dehypnotic/numbered_text/`.
 - **Custom Delimiters**: Joins active text blocks using any custom separator (e.g., `, `, `\n`, ` | `).
-- **Swap & Clone Operations**: Quick UI shortcuts to swap the content of any two numbered items, or clone one to another. Steppers start at `1` by default and their values persist after execution. The second index's max value is set to `1` more than the current sequence size, enabling swapping or cloning directly to a new item. Operation on non-existent entries behaves as if they were empty.
+- **Swap & Clone Operations**: Quick UI shortcuts to swap the content of any two numbered items, or clone an item into a target position (inserting it like Enter does, shifting all subsequent item numbers down by 1). Steppers start at `1` by default and their values persist after execution. The target index's max value is set to `1` more than the current sequence size, enabling cloning directly to a new item. Operation on non-existent entries behaves as if they were empty.
 - **Quick Operations**: Dedicated buttons to "Check All", "Uncheck All", "Copy Checked" to clipboard, "Delete Checked" lines, and "Paste New" to paste clipboard text directly as the next sequence item.
 
 #### Inputs & Outputs:

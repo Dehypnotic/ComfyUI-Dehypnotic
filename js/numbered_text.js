@@ -1012,15 +1012,22 @@ app.registerExtension({
                     const currentText = textWidget.value || "";
                     const items = parseSerializedText(currentText);
 
-                    const maxIdx = Math.max(fromVal, toVal) - 1;
-                    while (items.length <= maxIdx) {
+                    const idxA = fromVal - 1;
+                    const idxB = toVal - 1;
+
+                    const requiredLenForSource = fromVal;
+                    while (items.length < requiredLenForSource) {
                         items.push({ checked: false, text: "" });
                     }
 
-                    const idxA = fromVal - 1;
-                    const idxB = toVal - 1;
-                    const sourceItem = items[idxA];
-                    items[idxB] = { checked: sourceItem.checked, text: sourceItem.text };
+                    const sourceItem = items[idxA] || { checked: false, text: "" };
+                    const clonedItem = { checked: sourceItem.checked, text: sourceItem.text };
+
+                    while (items.length < idxB) {
+                        items.push({ checked: false, text: "" });
+                    }
+
+                    items.splice(idxB, 0, clonedItem);
 
                     textWidget.value = serializeItems(items);
                     renderList(listContainer, textWidget, node);
