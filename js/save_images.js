@@ -1,14 +1,15 @@
 import { app } from "../../scripts/app.js";
+import { applyAdaptiveCanvasOnly, installCanvasZoomPassthrough, installResizeFloor, measureRootContent } from "./shared/index.mjs";
 
 // ─── Dehypnotic Save Images: Thumbnail Gallery Extension ────────────────────
-// DOM-based thumbnail preview widget with fixed height and scrollbar.
+// DOM-based thumbnail preview widget with responsive scaling and Pixaroma architecture compliance.
 
 const EXTENSION_NAME = "Dehypnotic.SaveImages.Gallery";
 const NODE_TYPE = "SaveImagesDehypnotic";
 
 // ── Layout constants ────────────────────────────────────────────────────────
-const GALLERY_HEIGHT = 360;   // Fixed gallery viewport height (px)
-const WIDGET_HEIGHT = 400;    // Total widget height including path text + toggle
+const MIN_W = 300;
+const MIN_H = 140;
 const TOGGLE_COLOR_ON = "#34d399";
 const TOGGLE_COLOR_OFF = "#a1a1aa";
 const THUMB_SIZE = 80;        // Thumbnail square size (px)
@@ -169,6 +170,39 @@ app.registerExtension({
     },
   ],
 
+  beforeRegisterNodeDef(nodeType, nodeData) {
+    if (nodeData.name !== NODE_TYPE) return;
+
+    const origOnResize = nodeType.prototype.onResize;
+    nodeType.prototype.onResize = function (size) {
+      if (!window.LiteGraph?.vueNodesMode) {
+        const minH = this.properties?.showThumbnails ? MIN_H : 45;
+        if (size[0] < MIN_W) size[0] = MIN_W;
+        if (size[1] < minH) size[1] = minH;
+        if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+        if (this.size[1] < minH) this.size[1] = minH;
+      }
+      if (origOnResize) return origOnResize.apply(this, arguments);
+    };
+
+    const origDraw = nodeType.prototype.onDrawForeground;
+    nodeType.prototype.onDrawForeground = function (ctx) {
+      if (origDraw) origDraw.call(this, ctx);
+      if (this.flags?.collapsed) return;
+      if (window.LiteGraph?.vueNodesMode) return;
+      const minH = this.properties?.showThumbnails ? MIN_H : 45;
+      if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+      if (this.size[1] < minH) this.size[1] = minH;
+    };
+
+    const origRemoved = nodeType.prototype.onRemoved;
+    nodeType.prototype.onRemoved = function () {
+      this._dhSaveImagesFloorOff?.();
+      this._dhSaveImagesFloorOff = null;
+      if (origRemoved) return origRemoved.apply(this, arguments);
+    };
+  },
+
   async nodeCreated(node) {
     if (node.comfyClass !== NODE_TYPE) return;
 
@@ -177,14 +211,14 @@ app.registerExtension({
       node.properties.showThumbnails = true;
     }
 
-    // ── Enforce 20% wider minimum width ───────────────────────────────────
+    // ── Enforce minimum width/height ──────────────────────────────────────
     const origComputeSize = node.computeSize;
     node.computeSize = function (out) {
-      const size = origComputeSize ? origComputeSize.apply(this, arguments) : [210, 26];
-      size[0] = Math.max(size[0], 300); // Default is usually ~210, 260 is ~20% wider
+      const size = origComputeSize ? origComputeSize.apply(this, arguments) : [MIN_W, MIN_H];
+      size[0] = Math.max(size[0], MIN_W);
       return size;
-    }; 
-    node.size[0] = Math.max(node.size[0], 300);
+    };
+    node.size[0] = Math.max(node.size[0], MIN_W);
 
     hidePropertyWidgets(node);
     setTimeout(() => hidePropertyWidgets(node), 50);
@@ -200,16 +234,32 @@ app.registerExtension({
       }
     };
 
-    // ── Build DOM structure ───────────────────────────────────────────────
+    // ── Build DOM structure (Flexbox Architecture) ─────────────────────────
 
-    // Root container
+    // Main Container
     const root = document.createElement("div");
     root.style.cssText = `
       display: flex;
       flex-direction: column;
       width: 100%;
+      height: 100%;
+      box-sizing: border-box;
       font-family: Inter, Consolas, monospace;
-      gap: 0;
+      gap: 4px;
+    `;
+
+    // File path text
+    const pathText = document.createElement("div");
+    pathText.style.cssText = `
+      width: 100%;
+      font-size: 10px;
+      color: #b0b0b0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-align: center;
+      flex: 0 0 auto;
+      min-height: 14px;
+      box-sizing: border-box;
     `;
 
     // Toggle button
@@ -225,12 +275,11 @@ app.registerExtension({
       cursor: pointer;
       outline: none;
       transition: background 0.15s, border-color 0.15s, color 0.15s;
-      flex-shrink: 0;
+      flex: 0 0 auto;
       text-transform: uppercase;
       letter-spacing: 0.3px;
     `;
     toggleBtn.addEventListener("mouseover", () => {
-      // Lighten the green border and text on hover
       toggleBtn.style.borderColor = "#34d399";
       toggleBtn.style.color = "#ffffff";
     });
@@ -258,17 +307,18 @@ app.registerExtension({
       });
     });
 
-    // Gallery scroll container
+    // Main Content: Gallery scroll container
     const gallery = document.createElement("div");
     gallery.style.cssText = `
       width: 100%;
-      height: ${GALLERY_HEIGHT}px;
+      height: 100%;
+      flex: 1 1 auto;
+      min-height: 60px;
       overflow-y: auto;
       overflow-x: hidden;
       background: rgba(0, 0, 0, 0.20);
       border: 1px solid rgba(255, 255, 255, 0.05);
       border-radius: 4px;
-      margin-top: 4px;
       display: flex;
       flex-wrap: wrap;
       align-content: flex-start;
@@ -293,22 +343,6 @@ app.registerExtension({
     root.appendChild(styleEl);
     gallery.classList.add("dh-gallery-scroll");
 
-    // File path text
-    const pathText = document.createElement("div");
-    pathText.style.cssText = `
-      width: 100%;
-      font-size: 10px;
-      color: #b0b0b0;
-      margin-top: 0px;
-      margin-bottom: 8px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-align: center;
-      flex-shrink: 0;
-      min-height: 14px;
-      box-sizing: border-box;
-    `;
-
     // Empty state message
     const emptyMsg = document.createElement("div");
     emptyMsg.style.cssText = `
@@ -321,40 +355,48 @@ app.registerExtension({
     emptyMsg.textContent = "Kjør noden for å se forhåndsvisning";
     gallery.appendChild(emptyMsg);
 
-    // Assemble
+    // Assemble DOM
     root.appendChild(pathText);
     root.appendChild(toggleBtn);
     root.appendChild(gallery);
 
-    // Block events from propagating to canvas
-    const blockEvents = ["mousedown", "mouseup", "click", "dblclick", "pointerdown", "pointerup", "pointermove", "wheel"];
+    // Block non-wheel mouse/pointer events from canvas dragging
+    const blockEvents = ["mousedown", "mouseup", "click", "dblclick", "pointerdown", "pointerup", "pointermove"];
     blockEvents.forEach(evt => {
       root.addEventListener(evt, (e) => e.stopPropagation());
     });
 
     // ── Visibility management ─────────────────────────────────────────────
+    let lastExpandedHeight = 240;
+
     const updateVisibility = () => {
       const on = node.properties.showThumbnails;
       gallery.style.display = on ? "flex" : "none";
-      // Recalculate widget height
-      if (domWidget) {
-        domWidget.computeSize = () => {
-          if (!on) return [node.size[0], 56]; // path text + margin (22px) + toggle btn (22px) + bottom padding
-          return [node.size[0], WIDGET_HEIGHT];
-        };
-      }
-
-      // Force LiteGraph to recalculate the node's bounds. 
-      // Setting height to 10 causes setSize to clamp to the new minimum needed.
       if (node.size) {
-        node.setSize([node.size[0], 10]);
+        if (!on) {
+          if (node.size[1] > 100) {
+            lastExpandedHeight = node.size[1];
+          }
+          node.setSize([node.size[0], 10]);
+        } else {
+          node.setSize([node.size[0], Math.max(lastExpandedHeight, MIN_H + 60)]);
+        }
       }
+      node.setDirtyCanvas(true, true);
     };
 
+    // ── Add as DOM widget (Pixaroma Scaling Guidelines) ───────────────────
+    const domWidget = node.addDOMWidget("dh_preview_gallery", "custom_ui", root, {
+      getValue() { return ""; },
+      setValue() {},
+      getMinHeight: () => (node.properties.showThumbnails ? MIN_H : 45),
+      margin: 4,
+      serialize: false,
+    });
 
-    // ── Add as DOM widget ─────────────────────────────────────────────────
-    const domWidget = node.addDOMWidget("dh_preview_gallery", "custom_ui", root);
-    domWidget.computeSize = () => [node.size[0], WIDGET_HEIGHT];
+    applyAdaptiveCanvasOnly(domWidget);
+    installCanvasZoomPassthrough(root);
+    node._dhSaveImagesFloorOff = installResizeFloor(root, () => measureRootContent(root));
 
     // Initial state
     updateToggleStyle();
