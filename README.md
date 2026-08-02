@@ -164,6 +164,7 @@ A specialized, multi-format audio output node with dynamic UI and built-in playb
 - **Multi-Format Support**: Save audio as MP3, WAV (16-bit or 24-bit), FLAC, or Opus.
 - **Dynamic Interface**: The node's widget layout automatically adapts to show only the settings relevant to the selected audio format, keeping your graph clean.
 - **Inline Audio Player**: Preview your saved audio directly inside the ComfyUI node. Includes play/pause, seek bar, volume control, and an autoplay toggle.
+- **Preview Only Mode**: Toggle `preview_only` (`on`/`off`) to audition/preview audio streams in the built-in player without saving output files to disk (`off` by default).
 - **Format-Specific Tuning**:
   - MP3: `variable` (VBR), `constant` (CBR), and `average` (ABR) encoding across `low`, `medium`, and `high` quality.
   - WAV/FLAC: Choose target sample rate and 16-bit or 24-bit depth.
@@ -180,6 +181,7 @@ A specialized, multi-format audio output node with dynamic UI and built-in playb
 | **Required Input** | `date_subfolder_pattern` | `STRING` | Strftime pattern for subfolders (e.g., `%Y-%m-%d`). |
 | **Required Input** | `filename_prefix` | `STRING` | Filename prefix (e.g., `ComfyUI`). |
 | **Required Input** | `autoplay` | `["on", "off"]` | Toggle automatic playback in the node player after generation. |
+| **Required Input** | `preview_only` | `["on", "off"]` | Skip saving audio file to disk while keeping player preview functionality (`off` by default). |
 | **Required Input** | `format` | `["mp3", "wav", "flac", "opus"]` | Desired output audio format. |
 | **Dynamic Input** | `bitrate_mode` | `["variable", "constant", "average"]` | MP3: Encoding strategy. |
 | **Dynamic Input** | `quality` | `["low", "medium", "high"]` | MP3: Audio quality / target bitrate. |
@@ -313,13 +315,17 @@ A comprehensive video renderer and frame exporter node leveraging bundled `image
 - **Audio Integration & Single-Frame Looping**: Attach mono or stereo `AUDIO`. If a single image frame and an audio track are provided, the node automatically loops the frame for the full duration of the audio.
 - **Frame Extraction & Selection**: Extract specific frames (e.g. first frame `0`, last frame `-2`, all frames `-1`, or explicit lists like `0,5,10`) to a subfolder during video export.
 - **Quality & Performance Tuning**: CRF (Constant Rate Factor) quality control, encoder speed presets (`ultrafast` to `veryslow`), and optional frame preview rendering in the node output.
+- **Preview Only Mode**: Toggle `preview_only` (`off`/`on`) to audition video previews in the node player without saving video files to disk (`off` by default).
 
 #### Key Inputs & Outputs:
 | Type | Name | Default / Options | Description |
 | :--- | :--- | :--- | :--- |
-| **Required Input** | `save_mode` | `video`, `frames`, `video & frames` | Export mode selection. |
 | **Required Input** | `images` | `IMAGE` | Input video frame batch. |
 | **Required Input** | `file_path` | `output/video` | Output destination folder. |
+| **Required Input** | `date_subfolder_pattern` | `%Y-%m-%d` | Dated subfolder format pattern. |
+| **Required Input** | `filename_prefix` | `VID` | Filename prefix. |
+| **Required Input** | `filename_delimiter` | `_` | Separator between prefix and sequence number. |
+| **Required Input** | `preview_only` | `off`, `on` | Skip saving video file to disk while keeping player preview functionality (`off` by default). |
 | **Required Input** | `container` | `mp4`, `mkv`, `webm`, `mov` | Target video container format. |
 | **Required Input** | `video_codec` | `h264`, `h265`, `vp9`, `av1`, `prores`, `dnxhr` | Video codec for encoding. |
 | **Required Input** | `fps` | `24` | Target framerate (1–240 FPS). |

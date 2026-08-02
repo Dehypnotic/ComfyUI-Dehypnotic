@@ -236,6 +236,7 @@ class SaveVideo:
                 "date_subfolder_pattern": ("STRING", {"default": "%Y-%m-%d", "tooltip": "Optional strftime pattern or placeholders for subfolders."}),
                 "filename_prefix": ("STRING", {"default": "VID", "tooltip": "Filename prefix, e.g. VID_0001.mp4."}),
                 "filename_delimiter": ("STRING", {"default": "_", "tooltip": "Delimiter between prefix and sequence number."}),
+                "preview_only": (["off", "on"], {"default": "off", "tooltip": "Skip saving video file to disk while keeping player preview functionality."}),
                 "number_padding": ("INT", {"default": 4, "min": 1, "max": 10, "tooltip": "Digits in the sequence number (0001, 0002, ...).", "display": "property"}),
                 "number_start": ("INT", {"default": 1, "min": 0, "max": 1_000_000, "tooltip": "Starting value for the sequence number.", "display": "property"}),
                 "container": (tuple(CONTAINER_OPTIONS.keys()), {"default": "mp4", "tooltip": "Container format (mp4, mkv, webm, mov)."}),
@@ -416,13 +417,14 @@ class SaveVideo:
         date_subfolder_pattern,
         filename_prefix,
         filename_delimiter,
-        number_padding,
-        number_start,
-        container,
-        video_codec,
-        fps,
-        crf,
-        preset,
+        preview_only="off",
+        number_padding=4,
+        number_start=1,
+        container="mp4",
+        video_codec="h264",
+        fps=24.0,
+        crf=23,
+        preset="fast",
         audio=None,
         loop_still_to_audio=True,
         show_progress=True,
@@ -438,34 +440,7 @@ class SaveVideo:
                 msg += f" Import error: {_IMAGEIO_FFMPEG_ERROR}"
             raise RuntimeError(msg)
 
-        # --- Path Setup & Validation ---
-        context = self._build_template_context()
-        expanded_file_path = self._expand_path_templates(file_path, context)
-        expanded_prefix = self._expand_path_templates(filename_prefix, context)
-        subfolder = self._render_date_subfolder(date_subfolder_pattern, context)
-
-        user_path = Path(str(expanded_file_path or "")).expanduser()
-        if user_path.is_absolute():
-            base_dir = user_path
-        else:
-            base_output = self._base_output_dir()
-            rel_parts = [p for p in user_path.parts if p and p != "."]
-            if rel_parts and rel_parts[0].lower() in ("output", "outputs"):
-                rel_parts = rel_parts[1:]
-            rel_path = Path(*rel_parts) if rel_parts else Path()
-            base_dir = base_output / rel_path
-
-        if subfolder:
-            base_dir = base_dir / Path(subfolder)
-
-        prefix_dir_part = os.path.dirname(expanded_prefix)
-        if prefix_dir_part:
-            base_dir = base_dir / Path(prefix_dir_part)
-
-        final_video_dir = self._normalize_path(base_dir)
-        final_video_dir.mkdir(parents=True, exist_ok=True)
-
-        base_prefix = os.path.basename(expanded_prefix)
+        is_preview_only = (str(preview_only).lower() == "on")
 
         # --- Get Frames & Codec Info ---
         frames = _normalize_frames(images)
@@ -483,15 +458,57 @@ class SaveVideo:
             allowed = ", ".join(sorted(container_info["allowed_codecs"]))
             raise ValueError(f"Codec '{codec_key}' is not supported in '{container_key}'. Allowed: {allowed}.")
 
-        # --- Sequence Numbering ---
-        seq = _next_seq_number(final_video_dir, base_prefix, filename_delimiter, number_padding)
-        if number_start > 0:
-            seq = max(seq, number_start)
-        stem = f"{base_prefix}{filename_delimiter}{seq:0{number_padding}d}"
-
         extension = container_info.get("extension", "mp4")
-        out_path = self._normalize_path(final_video_dir / f"{stem}.{extension}")
-        self._validate_path_is_allowed(out_path)
+
+        try:
+            from folder_paths import get_temp_directory  # type: ignore
+            temp_dir = Path(get_temp_directory())
+        except Exception:
+            temp_dir = Path(tempfile.gettempdir())
+
+        preview_filename = f"dh_savevideo_preview.{extension}"
+        temp_preview = temp_dir / preview_filename
+
+        if is_preview_only:
+            out_path = self._normalize_path(temp_preview)
+        else:
+            # --- Path Setup & Validation ---
+            context = self._build_template_context()
+            expanded_file_path = self._expand_path_templates(file_path, context)
+            expanded_prefix = self._expand_path_templates(filename_prefix, context)
+            subfolder = self._render_date_subfolder(date_subfolder_pattern, context)
+
+            user_path = Path(str(expanded_file_path or "")).expanduser()
+            if user_path.is_absolute():
+                base_dir = user_path
+            else:
+                base_output = self._base_output_dir()
+                rel_parts = [p for p in user_path.parts if p and p != "."]
+                if rel_parts and rel_parts[0].lower() in ("output", "outputs"):
+                    rel_parts = rel_parts[1:]
+                rel_path = Path(*rel_parts) if rel_parts else Path()
+                base_dir = base_output / rel_path
+
+            if subfolder:
+                base_dir = base_dir / Path(subfolder)
+
+            prefix_dir_part = os.path.dirname(expanded_prefix)
+            if prefix_dir_part:
+                base_dir = base_dir / Path(prefix_dir_part)
+
+            final_video_dir = self._normalize_path(base_dir)
+            final_video_dir.mkdir(parents=True, exist_ok=True)
+
+            base_prefix = os.path.basename(expanded_prefix)
+
+            # --- Sequence Numbering ---
+            seq = _next_seq_number(final_video_dir, base_prefix, filename_delimiter, number_padding)
+            if number_start > 0:
+                seq = max(seq, number_start)
+            stem = f"{base_prefix}{filename_delimiter}{seq:0{number_padding}d}"
+
+            out_path = self._normalize_path(final_video_dir / f"{stem}.{extension}")
+            self._validate_path_is_allowed(out_path)
 
         # --- Audio Extraction (VHS method) ---
         audio_bytes = None
@@ -628,25 +645,15 @@ class SaveVideo:
         if not out_exists:
             raise RuntimeError(f"Output file missing or empty: {out_path}")
 
-        video_path_str = str(out_path.resolve())
-        if show_progress: print(f"[SaveVideo] Done: {video_path_str} ({out_path.stat().st_size} bytes)")
-
-        # --- UI Output ---
-        abs_path = video_path_str or str(final_video_dir.resolve())
-
-        # Always copy to a fixed temp file so the JS preview works regardless
-        # of where the permanent video was saved (even outside the output dir).
-        extension = out_path.suffix.lstrip(".")
-        try:
-            from folder_paths import get_temp_directory  # type: ignore
-            temp_dir = Path(get_temp_directory())
-        except Exception:
-            temp_dir = Path(tempfile.gettempdir())
-
-        preview_filename = f"dh_savevideo_preview.{extension}"
-        temp_preview = temp_dir / preview_filename
-        import shutil
-        shutil.copy2(str(out_path), str(temp_preview))
+        if is_preview_only:
+            abs_path = "[Preview Only]"
+            if show_progress: print(f"[SaveVideo] Preview generated (Preview Only mode, not saved to disk)")
+        else:
+            video_path_str = str(out_path.resolve())
+            if show_progress: print(f"[SaveVideo] Done: {video_path_str} ({out_path.stat().st_size} bytes)")
+            abs_path = video_path_str
+            import shutil
+            shutil.copy2(str(out_path), str(temp_preview))
 
         ui = {
             "text": abs_path,

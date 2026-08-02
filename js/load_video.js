@@ -1,5 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
+import { applyAdaptiveCanvasOnly, installCanvasZoomPassthrough, installResizeFloor, measureRootContent } from "./shared/index.mjs";
 
 const EXTENSION_NAME = "Dehypnotic.LoadVideo";
 const NODE_TYPE = "LoadVideoDehypnotic";
@@ -11,6 +12,40 @@ function fitHeight(node) {
 
 app.registerExtension({
   name: EXTENSION_NAME,
+
+  beforeRegisterNodeDef(nodeType, nodeData) {
+    if (nodeData.name !== NODE_TYPE) return;
+
+    const MIN_W = 310;
+    const MIN_H = 140;
+
+    const origOnResize = nodeType.prototype.onResize;
+    nodeType.prototype.onResize = function (size) {
+      if (!window.LiteGraph?.vueNodesMode) {
+        if (size[0] < MIN_W) size[0] = MIN_W;
+        if (size[1] < MIN_H) size[1] = MIN_H;
+        if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+        if (this.size[1] < MIN_H) this.size[1] = MIN_H;
+      }
+      if (origOnResize) return origOnResize.apply(this, arguments);
+    };
+
+    const origDraw = nodeType.prototype.onDrawForeground;
+    nodeType.prototype.onDrawForeground = function (ctx) {
+      if (origDraw) origDraw.call(this, ctx);
+      if (this.flags?.collapsed) return;
+      if (window.LiteGraph?.vueNodesMode) return;
+      if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+      if (this.size[1] < MIN_H) this.size[1] = MIN_H;
+    };
+
+    const origRemoved = nodeType.prototype.onRemoved;
+    nodeType.prototype.onRemoved = function () {
+      this._dhLoadVideoFloorOff?.();
+      this._dhLoadVideoFloorOff = null;
+      if (origRemoved) return origRemoved.apply(this, arguments);
+    };
+  },
 
   async nodeCreated(node) {
     if (node.comfyClass !== NODE_TYPE) return;
@@ -168,7 +203,15 @@ app.registerExtension({
     videoEl.onmouseleave = () => { videoEl.muted = true; };
     container.appendChild(videoEl);
 
-    const previewWidget = node.addDOMWidget("dh_video_preview", "custom_ui", container);
+    const previewWidget = node.addDOMWidget("dh_video_preview", "custom_ui", container, {
+      getMinHeight: () => (videoEl.style.display !== "none" ? 140 : 0),
+      margin: 4,
+      serialize: false,
+    });
+
+    applyAdaptiveCanvasOnly(previewWidget);
+    installCanvasZoomPassthrough(container);
+    node._dhLoadVideoFloorOff = installResizeFloor(container, () => measureRootContent(container));
     let aspectRatio = null;
 
     previewWidget.computeSize = function (width) {

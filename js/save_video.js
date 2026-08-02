@@ -1,5 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
+import { applyAdaptiveCanvasOnly, installCanvasZoomPassthrough, installResizeFloor, measureRootContent } from "./shared/index.mjs";
 
 // --- Dehypnotic Save Video: Properties + Video Preview Extension -------------
 // 1. Moves number_padding and number_start to the Properties panel.
@@ -132,6 +133,40 @@ app.registerExtension({
     },
   ],
 
+  beforeRegisterNodeDef(nodeType, nodeData) {
+    if (nodeData.name !== NODE_TYPE) return;
+
+    const MIN_W = 310;
+    const MIN_H = 140;
+
+    const origOnResize = nodeType.prototype.onResize;
+    nodeType.prototype.onResize = function (size) {
+      if (!window.LiteGraph?.vueNodesMode) {
+        if (size[0] < MIN_W) size[0] = MIN_W;
+        if (size[1] < MIN_H) size[1] = MIN_H;
+        if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+        if (this.size[1] < MIN_H) this.size[1] = MIN_H;
+      }
+      if (origOnResize) return origOnResize.apply(this, arguments);
+    };
+
+    const origDraw = nodeType.prototype.onDrawForeground;
+    nodeType.prototype.onDrawForeground = function (ctx) {
+      if (origDraw) origDraw.call(this, ctx);
+      if (this.flags?.collapsed) return;
+      if (window.LiteGraph?.vueNodesMode) return;
+      if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+      if (this.size[1] < MIN_H) this.size[1] = MIN_H;
+    };
+
+    const origRemoved = nodeType.prototype.onRemoved;
+    nodeType.prototype.onRemoved = function () {
+      this._dhSaveVideoFloorOff?.();
+      this._dhSaveVideoFloorOff = null;
+      if (origRemoved) return origRemoved.apply(this, arguments);
+    };
+  },
+
   async nodeCreated(node) {
     if (node.comfyClass !== NODE_TYPE) return;
 
@@ -212,7 +247,15 @@ app.registerExtension({
     container.appendChild(videoEl);
 
     // Register as DOM widget
-    const previewWidget = node.addDOMWidget("dh_video_preview", "custom_ui", container);
+    const previewWidget = node.addDOMWidget("dh_video_preview", "custom_ui", container, {
+      getMinHeight: () => (videoEl.style.display !== "none" ? 140 : 0),
+      margin: 4,
+      serialize: false,
+    });
+
+    applyAdaptiveCanvasOnly(previewWidget);
+    installCanvasZoomPassthrough(container);
+    node._dhSaveVideoFloorOff = installResizeFloor(container, () => measureRootContent(container));
 
     // Dynamic height based on video aspect ratio
     let aspectRatio = null;
@@ -268,13 +311,17 @@ app.registerExtension({
       videoEl.src = url;
       videoEl.style.display = "block";
 
-      // Show shortened path in label
+      // Show shortened path or Preview Only in label
       const text = message?.text || info.filename;
-      const parts = (typeof text === "string" ? text : "").split(/[/\\]/);
-      const outIdx = parts.lastIndexOf("output");
-      pathLabel.textContent = outIdx >= 0
-        ? parts.slice(outIdx).join("\\")
-        : parts.slice(-3).join("\\");
+      if (text === "[Preview Only]") {
+        pathLabel.innerHTML = `<span style="color:#eab308">Mode: </span>Preview Only (not saved)`;
+      } else {
+        const parts = (typeof text === "string" ? text : "").split(/[/\\]/);
+        const outIdx = parts.lastIndexOf("output");
+        pathLabel.textContent = outIdx >= 0
+          ? parts.slice(outIdx).join("\\")
+          : parts.slice(-3).join("\\");
+      }
       pathLabel.style.display = "block";
 
       videoEl.play().catch(() => {});

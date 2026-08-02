@@ -1,4 +1,5 @@
 import { app } from "../../scripts/app.js";
+import { applyAdaptiveCanvasOnly, installCanvasZoomPassthrough, installResizeFloor, measureRootContent } from "./shared/index.mjs";
 
 // ─── Dehypnotic SaveAudio: Dynamic widgets + Inline Audio Player ──────────────
 // 1. Removes/restores format-specific widgets from node.widgets based on the
@@ -29,6 +30,7 @@ const WIDGET_ORDER = [
   "date_subfolder_pattern",
   "filename_prefix",
   "autoplay",
+  "preview_only",
   "format",
   // mp3
   "bitrate_mode",
@@ -59,6 +61,7 @@ function injectCSS() {
       display: flex;
       flex-direction: column;
       width: 100%;
+      height: 100%;
       box-sizing: border-box;
       font-family: Inter, Consolas, monospace;
     }
@@ -365,8 +368,12 @@ function buildPlayerWidget() {
     playerBody.style.display = "flex";
 
     if (savedPath) {
-      const filename = savedPath.replace(/\\/g, "/").split("/").pop() ?? savedPath;
-      pathLabel.innerHTML = `<span style="color:#71717a">Saved: </span>${filename}`;
+      if (savedPath === "[Preview Only]") {
+        pathLabel.innerHTML = `<span style="color:#eab308">Mode: </span>Preview Only (not saved)`;
+      } else {
+        const filename = savedPath.replace(/\\/g, "/").split("/").pop() ?? savedPath;
+        pathLabel.innerHTML = `<span style="color:#71717a">Saved: </span>${filename}`;
+      }
     } else {
       pathLabel.textContent = "";
     }
@@ -383,22 +390,63 @@ function buildPlayerWidget() {
 app.registerExtension({
   name: EXTENSION_NAME,
 
+  beforeRegisterNodeDef(nodeType, nodeData) {
+    if (nodeData.name !== NODE_TYPE) return;
+
+    const MIN_W = 300;
+    const MIN_H = 140;
+
+    const origOnResize = nodeType.prototype.onResize;
+    nodeType.prototype.onResize = function (size) {
+      if (!window.LiteGraph?.vueNodesMode) {
+        if (size[0] < MIN_W) size[0] = MIN_W;
+        if (size[1] < MIN_H) size[1] = MIN_H;
+        if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+        if (this.size[1] < MIN_H) this.size[1] = MIN_H;
+      }
+      if (origOnResize) return origOnResize.apply(this, arguments);
+    };
+
+    const origDraw = nodeType.prototype.onDrawForeground;
+    nodeType.prototype.onDrawForeground = function (ctx) {
+      if (origDraw) origDraw.call(this, ctx);
+      if (this.flags?.collapsed) return;
+      if (window.LiteGraph?.vueNodesMode) return;
+      if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+      if (this.size[1] < MIN_H) this.size[1] = MIN_H;
+    };
+
+    const origRemoved = nodeType.prototype.onRemoved;
+    nodeType.prototype.onRemoved = function () {
+      this._dhAudioFloorOff?.();
+      this._dhAudioFloorOff = null;
+      if (origRemoved) return origRemoved.apply(this, arguments);
+    };
+  },
+
   async nodeCreated(node) {
     if (node.comfyClass !== NODE_TYPE) return;
 
     // Ensure minimum width
     const origComputeSize = node.computeSize?.bind(node);
     node.computeSize = function(out) {
-      const size = origComputeSize ? origComputeSize(out) : [260, 26];
+      const size = origComputeSize ? origComputeSize(out) : [300, 140];
       size[0] = Math.max(size[0], 300);
+      size[1] = Math.max(size[1], 140);
       return size;
     };
     node.size[0] = Math.max(node.size[0], 300);
 
     // ── Attach audio player DOM widget first so it's in the snapshot ──────
     const playerRoot = buildPlayerWidget();
-    const domWidget  = node.addDOMWidget("dh_audio_player", "custom_ui", playerRoot);
-    domWidget.computeSize = () => [node.size[0], PLAYER_WIDGET_HEIGHT];
+    const domWidget  = node.addDOMWidget("dh_audio_player", "custom_ui", playerRoot, {
+      getMinHeight: () => 100,
+      margin: 4,
+      serialize: false,
+    });
+    applyAdaptiveCanvasOnly(domWidget);
+    installCanvasZoomPassthrough(playerRoot);
+    node._dhAudioFloorOff = installResizeFloor(playerRoot, () => measureRootContent(playerRoot));
     node._dhPlayerRoot = playerRoot;
 
     // ── Wire up format widget ─────────────────────────────────────────────

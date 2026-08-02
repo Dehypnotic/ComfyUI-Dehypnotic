@@ -547,6 +547,9 @@ class SaveAudioMP3:
                 # ── Autoplay ─────────────────────────────────────────────────
                 "autoplay":               (["on", "off"], {"default": "on"}),
 
+                # ── Preview Only ─────────────────────────────────────────────
+                "preview_only":           (["on", "off"], {"default": "off"}),
+
                 # ── Format selector ──────────────────────────────────────────
                 "format":                 (["mp3", "wav", "flac", "opus"], {"default": "mp3"}),
             },
@@ -750,6 +753,7 @@ class SaveAudioMP3:
         date_subfolder_pattern,
         filename_prefix,
         autoplay="on",
+        preview_only="off",
         format="mp3",
         # MP3
         bitrate_mode="variable",
@@ -771,38 +775,42 @@ class SaveAudioMP3:
         fmt = (format or "mp3").lower()
         ext = _FORMAT_EXT.get(fmt, f".{fmt}")
 
-        # Expand templates
-        context = self._build_template_context(prompt, extra_pnginfo)
-        file_path       = self._expand_path_templates(file_path, context)
-        subfolder       = self._render_date_subfolder(date_subfolder_pattern, context)
-        filename_prefix = self._expand_path_templates(filename_prefix, context)
+        is_preview_only = (str(preview_only).lower() == "on")
+        out_path = ""
 
-        if subfolder:
-            file_path = os.path.join(file_path, subfolder)
+        if not is_preview_only:
+            # Expand templates
+            context = self._build_template_context(prompt, extra_pnginfo)
+            file_path       = self._expand_path_templates(file_path, context)
+            subfolder       = self._render_date_subfolder(date_subfolder_pattern, context)
+            filename_prefix = self._expand_path_templates(filename_prefix, context)
 
-        prefix_dir   = os.path.dirname(filename_prefix)
-        base_dir     = self._resolve_out_dir(file_path)
-        final_dir    = os.path.join(base_dir, prefix_dir)
-        final_dir_abs = os.path.abspath(final_dir)
-        _ensure_dir(final_dir_abs)
+            if subfolder:
+                file_path = os.path.join(file_path, subfolder)
 
-        base_prefix = os.path.basename(filename_prefix)
-        filename    = self._next_filename(final_dir_abs, base_prefix, ext)
-        out_path    = os.path.join(final_dir_abs, filename)
+            prefix_dir   = os.path.dirname(filename_prefix)
+            base_dir     = self._resolve_out_dir(file_path)
+            final_dir    = os.path.join(base_dir, prefix_dir)
+            final_dir_abs = os.path.abspath(final_dir)
+            _ensure_dir(final_dir_abs)
 
-        self._validate_path_is_allowed(out_path)
+            base_prefix = os.path.basename(filename_prefix)
+            filename    = self._next_filename(final_dir_abs, base_prefix, ext)
+            out_path    = os.path.join(final_dir_abs, filename)
 
-        # ── Encode to final destination ───────────────────────────────────────
-        if fmt == "mp3":
-            _encode_mp3(pcm, sr, out_path, bitrate_mode, quality)
-        elif fmt == "wav":
-            _encode_wav(pcm, sr, out_path, sample_rate, bit_depth)
-        elif fmt == "flac":
-            _encode_flac(pcm, sr, out_path, sample_rate, bit_depth, flac_compression)
-        elif fmt == "opus":
-            _encode_opus(pcm, sr, out_path, opus_bitrate, opus_application, opus_vbr)
-        else:
-            raise ValueError(f"Ukjent format: {fmt!r}. Støttede formater: mp3, wav, flac, opus.")
+            self._validate_path_is_allowed(out_path)
+
+            # ── Encode to final destination ───────────────────────────────────────
+            if fmt == "mp3":
+                _encode_mp3(pcm, sr, out_path, bitrate_mode, quality)
+            elif fmt == "wav":
+                _encode_wav(pcm, sr, out_path, sample_rate, bit_depth)
+            elif fmt == "flac":
+                _encode_flac(pcm, sr, out_path, sample_rate, bit_depth, flac_compression)
+            elif fmt == "opus":
+                _encode_opus(pcm, sr, out_path, opus_bitrate, opus_application, opus_vbr)
+            else:
+                raise ValueError(f"Ukjent format: {fmt!r}. Støttede formater: mp3, wav, flac, opus.")
 
         # ── Temp preview copy (fixed filename, always overwritten) ────────────
         _PREVIEW_FILENAME = f"dehypnotic_preview_audio{ext}"
@@ -837,6 +845,8 @@ class SaveAudioMP3:
             application=opus_application,
             vbr=opus_vbr,
         )
+        if is_preview_only:
+            format_info += "\nMode: Preview Only (Not saved to disk)"
 
         # ── UI output for JS player ───────────────────────────────────────────
         ui = {
@@ -847,7 +857,7 @@ class SaveAudioMP3:
                     "type": "temp",
                 }
             ],
-            "saved_path": [out_path],
+            "saved_path": [out_path] if out_path else ["[Preview Only]"],
         }
 
         return {"ui": ui, "result": (audio, format_info)}
