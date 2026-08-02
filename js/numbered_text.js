@@ -153,8 +153,26 @@ function renderList(container, textWidget, node) {
     container.renderedValue = textValue;
     const items = parseSerializedText(textValue);
 
-    if (container.fromInput) container.fromInput.max = items.length;
-    if (container.toInput) container.toInput.max = items.length + 1;
+    if (container.fromInput) {
+        const maxFrom = Math.max(1, items.length);
+        container.fromInput.max = maxFrom;
+        const currentFrom = parseInt(container.fromInput.value, 10);
+        if (isNaN(currentFrom) || currentFrom < 1) {
+            container.fromInput.value = 1;
+        } else if (currentFrom > maxFrom) {
+            container.fromInput.value = maxFrom;
+        }
+    }
+    if (container.toInput) {
+        const maxTo = Math.max(1, items.length + 1);
+        container.toInput.max = maxTo;
+        const currentTo = parseInt(container.toInput.value, 10);
+        if (isNaN(currentTo) || currentTo < 1) {
+            container.toInput.value = 1;
+        } else if (currentTo > maxTo) {
+            container.toInput.value = maxTo;
+        }
+    }
     const separatorWidget = node.widgets.find(w => w.name === "separator");
     if (container.sepInput && separatorWidget) {
         container.sepInput.value = separatorWidget.value || ", ";
@@ -774,6 +792,16 @@ app.registerExtension({
                     input.style.margin = "0";
                     input.addEventListener("mousedown", (e) => e.stopPropagation());
                     input.addEventListener("pointerdown", (e) => e.stopPropagation());
+                    input.addEventListener("change", () => {
+                        let val = parseInt(input.value, 10);
+                        const minVal = parseInt(input.min, 10) || 1;
+                        const maxVal = parseInt(input.max, 10) || 1;
+                        if (isNaN(val) || val < minVal) {
+                            input.value = minVal;
+                        } else if (val > maxVal) {
+                            input.value = maxVal;
+                        }
+                    });
 
                     const incBtn = document.createElement("button");
                     incBtn.type = "button";
