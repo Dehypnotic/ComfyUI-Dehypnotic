@@ -114,13 +114,14 @@ A pure text block node equipped with a plain multi-line text editor, built-in fi
 #### Key Features:
 - **Plain Text Editor**: Just a classic text field without numbers or checkboxes.
 - **Preset Management**: Load and save plain text as `.txt` files directly from the UI dropdown. Automatically creates and stores files under `ComfyUI/user/Dehypnotic/text/`.
-- **Quick Operations**: Dedicated "Copy", "Paste", and "Clear" buttons at the bottom.
-- **Dynamic Text Replacing**: An optional `text_in` input (displayed as `text` on the node). If connected, the text provided from another node will instantly replace the text in this node upon execution.
+- **Quick Operations & Input Toggle**: Dedicated "Input ON / Input OFF" toggle button (placed next to Copy) to easily enable or disable incoming text from `text_in` without disconnecting wires. Also includes "Copy", "Paste", and "Clear" buttons at the bottom.
+- **Dynamic Text Replacing**: An optional `text_in` input (displayed as `text` on the node). When `Input ON` is active (default), text provided from another node will replace the text in this node upon execution. When `Input OFF` is active, incoming text is ignored and the text in the editor remains unchanged.
 
 #### Inputs & Outputs:
 | Type | Name | Data Type | Description |
 | :--- | :--- | :--- | :--- |
-| **Optional Input** | `text_in` (UI: `text`) | `STRING` | Incoming text that replaces the node's current text. |
+| **Optional Input** | `text_in` (UI: `text`) | `STRING` | Incoming text that replaces the node's current text when `Input ON` is active. |
+| **Optional Input** | `input_on` | `BOOLEAN` | Controls whether incoming `text_in` is processed (`True`/`Input ON`) or ignored (`False`/`Input OFF`). |
 | **Output** | `text` | `STRING` | The output plain text. |
 
 <img width="380" height="358" alt="image" src="https://github.com/user-attachments/assets/560f9216-215b-415c-832f-e08c6210fb1c" />
