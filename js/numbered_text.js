@@ -154,7 +154,7 @@ function renderList(container, textWidget, node) {
     const items = parseSerializedText(textValue);
 
     if (container.fromInput) container.fromInput.max = items.length;
-    if (container.toInput) container.toInput.max = items.length;
+    if (container.toInput) container.toInput.max = items.length + 1;
     const separatorWidget = node.widgets.find(w => w.name === "separator");
     if (container.sepInput && separatorWidget) {
         container.sepInput.value = separatorWidget.value || ", ";
@@ -759,7 +759,8 @@ app.registerExtension({
                     input.className = inputClass;
                     input.type = "number";
                     input.min = "1";
-                    input.placeholder = "#";
+                    input.placeholder = "1";
+                    input.value = "1";
                     input.style.width = "28px";
                     input.style.backgroundColor = "#2d2d2d";
                     input.style.border = "1px solid #555";
@@ -890,10 +891,7 @@ app.registerExtension({
                     const fromVal = parseInt(fromStepper.input.value, 10);
                     const toVal = parseInt(toStepper.input.value, 10);
 
-                    const currentText = textWidget.value || "";
-                    const items = parseSerializedText(currentText);
-
-                    if (isNaN(fromVal) || isNaN(toVal) || fromVal < 1 || toVal < 1 || fromVal > items.length || toVal > items.length) {
+                    if (isNaN(fromVal) || isNaN(toVal) || fromVal < 1 || toVal < 1) {
                         swapBtn.textContent = "Error!";
                         swapBtn.style.backgroundColor = "#962828";
                         swapBtn.style.color = "#fff";
@@ -901,9 +899,17 @@ app.registerExtension({
                             swapBtn.textContent = "Swap";
                             swapBtn.style.backgroundColor = "#27272a";
                             swapBtn.style.borderColor = "#3f3f46";
-                            swapBtn.style.color = "#a1a1aa";
+                            swapBtn.style.color = "#34d399";
                         }, 1000);
                         return;
+                    }
+
+                    const currentText = textWidget.value || "";
+                    const items = parseSerializedText(currentText);
+
+                    const maxIdx = Math.max(fromVal, toVal) - 1;
+                    while (items.length <= maxIdx) {
+                        items.push({ checked: false, text: "" });
                     }
 
                     const idxA = fromVal - 1;
@@ -919,14 +925,87 @@ app.registerExtension({
                     swapBtn.style.backgroundColor = "#2b5e2b";
                     swapBtn.style.color = "#fff";
 
-                    fromStepper.input.value = "";
-                    toStepper.input.value = "";
-
                     setTimeout(() => {
                         swapBtn.textContent = "Swap";
                         swapBtn.style.backgroundColor = "#27272a";
                         swapBtn.style.borderColor = "#3f3f46";
-                        swapBtn.style.color = "#a1a1aa";
+                        swapBtn.style.color = "#34d399";
+                    }, 1000);
+                });
+
+                const cloneBtn = document.createElement("button");
+                cloneBtn.type = "button";
+                cloneBtn.textContent = "Clone";
+                cloneBtn.style.backgroundColor = "#27272a";
+                cloneBtn.style.border = "1px solid #3f3f46";
+                cloneBtn.style.borderRadius = "3px";
+                cloneBtn.style.color = "#34d399";
+                cloneBtn.style.padding = "3px 12px";
+                cloneBtn.style.fontSize = "10px";
+                cloneBtn.style.fontFamily = "sans-serif";
+                cloneBtn.style.cursor = "pointer";
+                cloneBtn.style.marginLeft = "4px";
+                cloneBtn.style.transition = "background 0.15s, border-color 0.15s, color 0.15s";
+                cloneBtn.addEventListener("mousedown", (e) => e.stopPropagation());
+                cloneBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+
+                cloneBtn.addEventListener("mouseover", () => {
+                    if (cloneBtn.style.backgroundColor !== "rgb(43, 94, 43)" && cloneBtn.style.backgroundColor !== "rgb(150, 40, 40)") {
+                        cloneBtn.style.backgroundColor = "rgba(16, 185, 129, 0.12)";
+                        cloneBtn.style.borderColor = "#10b981";
+                        cloneBtn.style.color = "#34d399";
+                    }
+                });
+                cloneBtn.addEventListener("mouseout", () => {
+                    if (cloneBtn.style.backgroundColor !== "rgb(43, 94, 43)" && cloneBtn.style.backgroundColor !== "rgb(150, 40, 40)") {
+                        cloneBtn.style.backgroundColor = "#27272a";
+                        cloneBtn.style.borderColor = "#3f3f46";
+                        cloneBtn.style.color = "#34d399";
+                    }
+                });
+
+                cloneBtn.addEventListener("click", () => {
+                    const fromVal = parseInt(fromStepper.input.value, 10);
+                    const toVal = parseInt(toStepper.input.value, 10);
+
+                    if (isNaN(fromVal) || isNaN(toVal) || fromVal < 1 || toVal < 1) {
+                        cloneBtn.textContent = "Error!";
+                        cloneBtn.style.backgroundColor = "#962828";
+                        cloneBtn.style.color = "#fff";
+                        setTimeout(() => {
+                            cloneBtn.textContent = "Clone";
+                            cloneBtn.style.backgroundColor = "#27272a";
+                            cloneBtn.style.borderColor = "#3f3f46";
+                            cloneBtn.style.color = "#34d399";
+                        }, 1000);
+                        return;
+                    }
+
+                    const currentText = textWidget.value || "";
+                    const items = parseSerializedText(currentText);
+
+                    const maxIdx = Math.max(fromVal, toVal) - 1;
+                    while (items.length <= maxIdx) {
+                        items.push({ checked: false, text: "" });
+                    }
+
+                    const idxA = fromVal - 1;
+                    const idxB = toVal - 1;
+                    const sourceItem = items[idxA];
+                    items[idxB] = { checked: sourceItem.checked, text: sourceItem.text };
+
+                    textWidget.value = serializeItems(items);
+                    renderList(listContainer, textWidget, node);
+
+                    cloneBtn.textContent = "Cloned!";
+                    cloneBtn.style.backgroundColor = "#2b5e2b";
+                    cloneBtn.style.color = "#fff";
+
+                    setTimeout(() => {
+                        cloneBtn.textContent = "Clone";
+                        cloneBtn.style.backgroundColor = "#27272a";
+                        cloneBtn.style.borderColor = "#3f3f46";
+                        cloneBtn.style.color = "#34d399";
                     }, 1000);
                 });
 
@@ -968,6 +1047,7 @@ app.registerExtension({
                 swapRow.appendChild(arrow);
                 swapRow.appendChild(toStepper.wrap);
                 swapRow.appendChild(swapBtn);
+                swapRow.appendChild(cloneBtn);
                 swapRow.appendChild(sepLabel);
                 swapRow.appendChild(sepInput);
 
