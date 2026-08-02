@@ -19,3 +19,6 @@ When building or modifying ComfyUI custom nodes that utilize custom HTML/DOM wid
    - Apply `installCanvasZoomPassthrough(container)` to allow canvas zooming over node bounds.
    - Apply `installResizeFloor(container, measureFloorFn)` to lock minimum height during resize handle dragging in Nodes 2.0.
    - Implement `onResize` and `onDrawForeground` size clamping (`MIN_W`, `MIN_H`) for the Classic renderer.
+
+   4. **Limitations**:
+   - Don't change nodes that are not mentioned in the user request.
