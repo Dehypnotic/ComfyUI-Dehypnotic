@@ -389,7 +389,7 @@ A feature-rich noise generator and audio processor with an embedded dark GUI int
 
 Whitelist behavior and safety
 - The node refuses to write outside `ComfyUI/output/` unless the path is under one of the whitelisted roots.
-- Recommended location in ComfyUI/config/ instead of the node folder so it survives node updates.
+- Recommended location in ComfyUI\user instead of the node folder so it survives node updates.
 - Loader lookup order: env var → global ComfyUI locations → node folder.
 - Lines starting with `#` are treated as comments in the JSON file.
 - An allowed root permits saving in that folder and all subfolders; whitelist a deeper path to restrict more tightly.
