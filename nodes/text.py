@@ -23,6 +23,9 @@ class TextDehypnotic:
                 "text_in": ("STRING", {
                     "forceInput": True,
                 }),
+                "input_on": ("BOOLEAN", {
+                    "default": True,
+                }),
             }
         }
 
@@ -32,9 +35,12 @@ class TextDehypnotic:
     CATEGORY = "Dehypnotic/📝 Text Utils"
     OUTPUT_NODE = True
 
-    def run(self, text: str, text_in: str = None) -> dict:
-        out_text = text_in if text_in is not None else text
-        
+    def run(self, text: str, text_in: str = None, input_on: bool = True) -> dict:
+        if input_on and text_in is not None:
+            out_text = text_in
+        else:
+            out_text = text
+            
         # We return a dictionary with "ui" to update the frontend widget,
         # and "result" for the actual output values.
         return {"ui": {"text": [out_text]}, "result": (out_text,)}

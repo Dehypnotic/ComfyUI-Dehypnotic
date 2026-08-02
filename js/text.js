@@ -171,6 +171,9 @@ app.registerExtension({
 
     async nodeCreated(node) {
         if (node.comfyClass === "Text" || node.comfyClass === "dehypnotic_Text" || node.comfyClass === "TextDehypnotic") {
+            if (node.properties.inputOn === undefined) {
+                node.properties.inputOn = true;
+            }
             const textWidget = hideNativeTextWidget(node);
             
             if (textWidget) {
@@ -388,6 +391,29 @@ app.registerExtension({
                     node.trigger("change");
                 }, "#fca5a5");
 
+                const inputToggleBtn = createButton(
+                    node.properties.inputOn !== false ? "Input ON" : "Input OFF",
+                    () => {
+                        node.properties.inputOn = !(node.properties.inputOn !== false);
+                        const inputOnWidget = node.widgets?.find(w => w.name === "input_on");
+                        if (inputOnWidget) {
+                            inputOnWidget.value = node.properties.inputOn;
+                        }
+                        updateInputBtnState();
+                        node.trigger("change");
+                    },
+                    node.properties.inputOn !== false ? "#34d399" : "#a1a1aa"
+                );
+
+                const updateInputBtnState = () => {
+                    const isOn = node.properties.inputOn !== false;
+                    inputToggleBtn.textContent = isOn ? "Input ON" : "Input OFF";
+                    inputToggleBtn.style.color = isOn ? "#34d399" : "#a1a1aa";
+                };
+
+                updateInputBtnState();
+
+                footerRow.appendChild(inputToggleBtn);
                 footerRow.appendChild(copyBtn);
                 footerRow.appendChild(pasteBtn);
                 footerRow.appendChild(clearBtn);
@@ -564,6 +590,14 @@ app.registerExtension({
                 node.onConfigure = function (info) {
                     origOnConfigure?.apply(this, arguments);
                     updateInputLabel();
+                    if (node.properties.inputOn === undefined) {
+                        node.properties.inputOn = true;
+                    }
+                    const inputOnWidget = node.widgets?.find(w => w.name === "input_on");
+                    if (inputOnWidget) {
+                        inputOnWidget.value = node.properties.inputOn !== false;
+                    }
+                    updateInputBtnState();
                     if (textWidget && textarea) {
                         textarea.value = textWidget.value || "";
                     }
@@ -572,7 +606,7 @@ app.registerExtension({
                 const origOnExecuted = node.onExecuted;
                 node.onExecuted = function(message) {
                     origOnExecuted?.apply(this, arguments);
-                    if (message && message.text) {
+                    if (node.properties.inputOn !== false && message && message.text) {
                         const newText = message.text[0];
                         if (textWidget) {
                             textWidget.value = newText;
