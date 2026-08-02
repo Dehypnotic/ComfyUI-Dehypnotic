@@ -92,21 +92,37 @@ def list_directory_contents(target_path: str = "") -> dict:
 
 
 def open_native_folder_dialog(initial_dir: str = "") -> Optional[str]:
-	"""Opens native Windows/OS folder selection dialog without browser upload prompts."""
+	"""Opens native Windows/OS folder selection dialog attached to active browser window."""
 	if os.name == "nt":
 		try:
 			init_script = ""
 			if initial_dir and os.path.isdir(initial_dir):
 				clean_init = initial_dir.replace("'", "''")
-				init_script = f"$f.SelectedPath = '{clean_init}'; "
+				init_script = f"if (Test-Path '{clean_init}') {{ $f.SelectedPath = '{clean_init}' }}; "
 
 			ps_script = (
-				'[System.Reflection.Assembly]::LoadWithPartialName("System.windows.forms") | Out-Null; '
+				'Add-Type -TypeDefinition @"\n'
+				'using System;\n'
+				'using System.Runtime.InteropServices;\n'
+				'public class Win32 {\n'
+				'    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();\n'
+				'}\n'
+				'"@; '
+				'[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms") | Out-Null; '
+				'$hwnd = [Win32]::GetForegroundWindow(); '
 				'$f = New-Object System.Windows.Forms.FolderBrowserDialog; '
 				f'{init_script}'
 				'$f.Description = "Select Destination Folder"; '
 				'$f.ShowNewFolderButton = $true; '
-				'if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $f.SelectedPath }'
+				'if ($hwnd -ne [IntPtr]::Zero) { '
+				'    $owner = New-Object System.Windows.Forms.NativeWindow; '
+				'    $owner.AssignHandle($hwnd); '
+				'    $res = $f.ShowDialog($owner); '
+				'    $owner.ReleaseHandle(); '
+				'} else { '
+				'    $res = $f.ShowDialog(); '
+				'} '
+				'if ($res -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $f.SelectedPath };'
 			)
 
 			creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -118,10 +134,13 @@ def open_native_folder_dialog(initial_dir: str = "") -> Optional[str]:
 			).strip()
 
 			if res and os.path.isdir(res):
-				return res
+				norm = os.path.normpath(res)
+				print(f"[FrameSave] Selected folder: {norm}")
+				return norm
 		except Exception as pe:
 			print("[FrameSave] PowerShell folder browser notice:", pe)
 
+	# Fallback to Tkinter
 	try:
 		import tkinter as tk
 		from tkinter import filedialog
@@ -129,7 +148,6 @@ def open_native_folder_dialog(initial_dir: str = "") -> Optional[str]:
 		root = tk.Tk()
 		root.withdraw()
 		root.attributes("-topmost", True)
-		root.update()
 
 		start_dir = initial_dir if initial_dir and os.path.isdir(initial_dir) else None
 		selected_path = filedialog.askdirectory(
@@ -138,7 +156,9 @@ def open_native_folder_dialog(initial_dir: str = "") -> Optional[str]:
 		)
 		root.destroy()
 		if selected_path and os.path.isdir(selected_path):
-			return selected_path
+			norm = os.path.normpath(selected_path)
+			print(f"[FrameSave] Selected folder (Tkinter): {norm}")
+			return norm
 	except Exception as te:
 		print("[FrameSave] Tkinter folder browser notice:", te)
 

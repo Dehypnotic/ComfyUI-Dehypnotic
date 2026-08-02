@@ -681,6 +681,14 @@ app.registerExtension({
     `;
     root.appendChild(styleEl);
 
+    // Helper to sync widget values back to LiteGraph node
+    const syncWidgetValue = (name, val) => {
+      const w = node.widgets?.find((w) => w.name === name);
+      if (w) w.value = val;
+      if (!node.properties) node.properties = {};
+      node.properties[name] = val;
+    };
+
     // ── Row 1: Path Input + Folder Browser Modal Button + Save Button ─
     const pathRow = document.createElement("div");
     pathRow.style.cssText = "display: flex; gap: 4px; align-items: center; width: 100%; box-sizing: border-box; flex: 0 0 auto;";
@@ -695,14 +703,28 @@ app.registerExtension({
     pickerBtn.className = "dh-icon-btn";
     pickerBtn.title = "Select destination folder";
     pickerBtn.innerHTML = "📁";
-    pickerBtn.onclick = (e) => {
+    pickerBtn.onclick = async (e) => {
       e.stopPropagation();
-      showFolderBrowserModal(pathInput.value, (selectedPath) => {
-        if (selectedPath) {
-          pathInput.value = selectedPath;
-          syncWidgetValue("file_path", selectedPath);
+      pickerBtn.disabled = true;
+      try {
+        const resp = await fetch("/dehypnotic/frame_save/browse_folder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ current_path: pathInput.value.trim() }),
+        });
+        const data = await resp.json();
+        if (data && data.success && data.path) {
+          pathInput.value = data.path;
+          syncWidgetValue("file_path", data.path);
+          pathInput.dispatchEvent(new Event("input", { bubbles: true }));
+          pathInput.dispatchEvent(new Event("change", { bubbles: true }));
+          node.setDirtyCanvas(true, true);
         }
-      });
+      } catch (err) {
+        console.error("Error opening folder picker:", err);
+      } finally {
+        pickerBtn.disabled = false;
+      }
     };
 
     const saveBtn = document.createElement("button");
@@ -715,12 +737,6 @@ app.registerExtension({
     pathRow.appendChild(pickerBtn);
     pathRow.appendChild(saveBtn);
 
-    // Helper to sync widget values back to LiteGraph node
-    const syncWidgetValue = (name, val) => {
-      const w = node.widgets?.find((w) => w.name === name);
-      if (w) w.value = val;
-      node.properties[name] = val;
-    };
     pathInput.addEventListener("input", () => syncWidgetValue("file_path", pathInput.value));
 
     // Status / feedback line
