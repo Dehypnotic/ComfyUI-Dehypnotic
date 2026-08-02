@@ -1146,6 +1146,59 @@ app.registerExtension({
                     });
                 });
 
+                const pasteNewBtn = createButton("Paste New", async () => {
+                    try {
+                        const clipboardText = await navigator.clipboard.readText();
+                        if (!clipboardText) {
+                            pasteNewBtn.textContent = "Empty!";
+                            pasteNewBtn.style.backgroundColor = "#962828";
+                            pasteNewBtn.style.color = "#fff";
+                            setTimeout(() => {
+                                pasteNewBtn.textContent = "Paste New";
+                                pasteNewBtn.style.backgroundColor = "#27272a";
+                                pasteNewBtn.style.color = "#34d399";
+                            }, 1500);
+                            return;
+                        }
+
+                        const currentText = textWidget.value || "";
+                        const items = parseSerializedText(currentText);
+
+                        const isEffectivelyEmpty =
+                            items.length === 0 ||
+                            (items.length === 1 && items[0].text.trim() === "");
+
+                        if (isEffectivelyEmpty) {
+                            items[0] = { checked: true, text: clipboardText };
+                        } else {
+                            items.push({ checked: true, text: clipboardText });
+                        }
+
+                        textWidget.value = serializeItems(items);
+                        renderList(listContainer, textWidget, node);
+
+                        pasteNewBtn.textContent = "Pasted!";
+                        pasteNewBtn.style.backgroundColor = "#2b5e2b";
+                        pasteNewBtn.style.color = "#fff";
+
+                        setTimeout(() => {
+                            pasteNewBtn.textContent = "Paste New";
+                            pasteNewBtn.style.backgroundColor = "#27272a";
+                            pasteNewBtn.style.color = "#34d399";
+                        }, 1500);
+                    } catch (err) {
+                        console.error("Failed to read clipboard: ", err);
+                        pasteNewBtn.textContent = "Error!";
+                        pasteNewBtn.style.backgroundColor = "#962828";
+                        pasteNewBtn.style.color = "#fff";
+                        setTimeout(() => {
+                            pasteNewBtn.textContent = "Paste New";
+                            pasteNewBtn.style.backgroundColor = "#27272a";
+                            pasteNewBtn.style.color = "#34d399";
+                        }, 1500);
+                    }
+                });
+
                 const checkAllBtn = createButton("Check All", () => {
                     const currentText = textWidget.value || "";
                     const items = parseSerializedText(currentText);
@@ -1239,6 +1292,7 @@ app.registerExtension({
 
                 buttonContainer.appendChild(deleteBtn);
                 buttonContainer.appendChild(copyBtn);
+                buttonContainer.appendChild(pasteNewBtn);
                 buttonContainer.appendChild(checkAllBtn);
                 buttonContainer.appendChild(uncheckAllBtn);
 
