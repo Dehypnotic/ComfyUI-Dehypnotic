@@ -1,5 +1,15 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
+import { applyAdaptiveCanvasOnly, installCanvasZoomPassthrough, installResizeFloor, measureRootContent } from "./shared/index.mjs";
+
+const EXTENSION_NAME = "Dehypnotic.SonicColor";
+const NODE_TYPE = "SonicColor";
+
+const DEFAULT_W = 410;
+const DEFAULT_H = 475;
+const MIN_W = 380;
+const MIN_H = 340;
+const WIDGET_MIN_H = 300;
 
 const EQ_BANDS = [
     { key: "eq_50hz", label: "50Hz", type: "lowshelf", freq: 50 },
@@ -41,11 +51,10 @@ function injectCSS() {
     style.id = "sonic-color-css";
     style.textContent = `
     .sc-gui-root {
+        display: flex;
+        flex-direction: column;
         width: 100%;
-        height: 420px;
-        max-height: 420px;
-        overflow-y: auto;
-        overflow-x: hidden;
+        height: 100%;
         box-sizing: border-box;
         padding: 8px;
         background: #12151e;
@@ -54,10 +63,17 @@ function injectCSS() {
         color: #e2e8f0;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         font-size: 11px;
-        display: flex;
-        flex-direction: column;
         gap: 8px;
         user-select: none;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    .sc-tab-content-container {
+        flex: 1 1 auto;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        min-height: 140px;
     }
 
     .sc-gui-root::-webkit-scrollbar {
@@ -193,7 +209,8 @@ function injectCSS() {
         display: flex;
         flex-direction: column;
         gap: 6px;
-        flex-shrink: 0;
+        flex: 1 1 auto;
+        box-sizing: border-box;
     }
     .sc-row {
         display: flex;
@@ -342,10 +359,53 @@ api.addEventListener("sonic_color.update_duration", (e) => {
 });
 
 app.registerExtension({
-    name: "Dehypnotic.SonicColor",
+    name: EXTENSION_NAME,
+
+    beforeRegisterNodeDef(nodeType, nodeData) {
+        if (nodeData.name !== NODE_TYPE) return;
+
+        const origOnResize = nodeType.prototype.onResize;
+        nodeType.prototype.onResize = function (size) {
+            if (!window.LiteGraph?.vueNodesMode) {
+                if (size[0] < MIN_W) size[0] = MIN_W;
+                if (size[1] < MIN_H) size[1] = MIN_H;
+                if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+                if (this.size[1] < MIN_H) this.size[1] = MIN_H;
+            }
+            if (origOnResize) return origOnResize.apply(this, arguments);
+        };
+
+        const origDraw = nodeType.prototype.onDrawForeground;
+        nodeType.prototype.onDrawForeground = function (ctx) {
+            if (origDraw) origDraw.call(this, ctx);
+            if (this.flags?.collapsed) return;
+            if (window.LiteGraph?.vueNodesMode) return;
+            if (this.size[0] < MIN_W) this.size[0] = MIN_W;
+            if (this.size[1] < MIN_H) this.size[1] = MIN_H;
+        };
+
+        const origRemoved = nodeType.prototype.onRemoved;
+        nodeType.prototype.onRemoved = function () {
+            this._dhSonicColorFloorOff?.();
+            this._dhSonicColorFloorOff = null;
+            if (origRemoved) return origRemoved.apply(this, arguments);
+        };
+    },
+
     async nodeCreated(node) {
-        if (node.comfyClass !== "SonicColor") return;
+        if (node.comfyClass !== NODE_TYPE) return;
         injectCSS();
+
+        const origComputeSize = node.computeSize;
+        node.computeSize = function (out) {
+            const size = origComputeSize ? origComputeSize.apply(this, arguments) : [DEFAULT_W, DEFAULT_H];
+            size[0] = Math.max(size[0], MIN_W);
+            size[1] = Math.max(size[1], MIN_H);
+            return size;
+        };
+
+        if (node.size[0] < MIN_W) node.size[0] = DEFAULT_W;
+        if (node.size[1] < MIN_H) node.size[1] = DEFAULT_H;
 
         const paramsWidget = node.widgets?.find(w => w.name === "params");
         if (paramsWidget) {
@@ -498,13 +558,9 @@ app.registerExtension({
             isPlayingLive = true;
         };
 
-        // Create Root GUI element with fixed height + internal scrollbar
+        // Create Root GUI element with responsive flexbox layout
         const root = document.createElement("div");
         root.className = "sc-gui-root";
-
-        root.addEventListener("wheel", (e) => {
-            e.stopPropagation();
-        }, { passive: true });
 
         // -------------------------------------------------------------
         // 1. Header Bar: Preset dropdown, Save/Delete, Duration (H/M/S)
@@ -920,6 +976,21 @@ app.registerExtension({
             syncCurrentGuiToParamsWidget();
         });
 
+        // Helper: Dynamically fit node height to current DOM content
+        const fitNodeSizeToContent = () => {
+            requestAnimationFrame(() => {
+                const measured = measureRootContent(root);
+                if (measured > 0) {
+                    const titleH = window.LiteGraph?.NODE_TITLE_HEIGHT || 30;
+                    const targetH = Math.max(MIN_H, Math.ceil(measured + titleH + 12));
+                    const currentW = Math.max(node.size[0] || 0, MIN_W);
+                    node.setSize([currentW, targetH]);
+                    node.setDirtyCanvas(true, true);
+                    app.graph?.setDirtyCanvas(true, true);
+                }
+            });
+        };
+
         // Tab Switching Logic
         const switchTab = (tabIndex) => {
             tab1Btn.classList.toggle("active", tabIndex === 1);
@@ -932,6 +1003,7 @@ app.registerExtension({
             else if (tabIndex === 3) tabContentContainer.appendChild(tab3Content);
 
             node.setDirtyCanvas(true, true);
+            fitNodeSizeToContent();
         };
 
         tab1Btn.addEventListener("click", () => switchTab(1));
@@ -1322,21 +1394,24 @@ app.registerExtension({
         // Initial sync of default state
         syncCurrentGuiToParamsWidget();
 
-        // Set fixed node size
-        const NODE_WIDTH = 410;
-        const NODE_HEIGHT = 475;
-        node.size = [NODE_WIDTH, NODE_HEIGHT];
+        // Block non-wheel mouse/pointer events from canvas dragging
+        const blockEvents = ["mousedown", "mouseup", "click", "dblclick", "pointerdown", "pointerup", "pointermove"];
+        blockEvents.forEach(evt => {
+            root.addEventListener(evt, (e) => e.stopPropagation());
+        });
 
-        // Attach DOM Widget with FIXED height computeSize
+        // Attach DOM Widget with adaptive sizing & floor locking
         const domWidget = node.addDOMWidget("sonic_color_gui", "custom_ui", root, {
             getValue: () => getCurrentGuiState(),
             setValue: (val) => updateAllGuiFromState(val),
-            serialize: false
+            getMinHeight: () => WIDGET_MIN_H,
+            margin: 4,
+            serialize: false,
         });
 
-        domWidget.computeSize = function (width) {
-            return [Math.max(NODE_WIDTH, width), 420];
-        };
+        applyAdaptiveCanvasOnly(domWidget);
+        installCanvasZoomPassthrough(root);
+        node._dhSonicColorFloorOff = installResizeFloor(root, () => measureRootContent(root));
 
         const origOnConfigure = node.onConfigure;
         node.onConfigure = function (info) {
@@ -1354,7 +1429,9 @@ app.registerExtension({
                     } catch (e) { }
                 }
             }
-            node.size = [NODE_WIDTH, NODE_HEIGHT];
+            if (node.size[0] < MIN_W) node.size[0] = DEFAULT_W;
+            if (node.size[1] < MIN_H) node.size[1] = DEFAULT_H;
+            fitNodeSizeToContent();
             node.setDirtyCanvas(true, true);
         };
     }
