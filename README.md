@@ -101,7 +101,7 @@ A prompt management and text block organizer node. Allows writing multi-line tex
 | **Required Input** | `separator` | `STRING` | Delimiter string used to join active blocks (supports `\n`, `\t`). |
 | **Output** | `text` | `STRING` | Combined text of all active (checked) items. |
 
-<img width="792" height="406" alt="image" src="https://github.com/user-attachments/assets/34e4fc59-fa0e-4ff9-88d8-bec990940c59" />
+<img width="684" height="389" alt="image" src="https://github.com/user-attachments/assets/96cd1ba7-8762-4f96-8220-c1ea42a57f28" />
 
 ---
 
@@ -124,7 +124,7 @@ A pure text block node equipped with a plain multi-line text editor, built-in fi
 | **Optional Input** | `input_on` | `BOOLEAN` | Controls whether incoming `text_in` is processed (`True`/`Input ON`) or ignored (`False`/`Input OFF`). |
 | **Output** | `text` | `STRING` | The output plain text. |
 
-<img width="380" height="358" alt="image" src="https://github.com/user-attachments/assets/560f9216-215b-415c-832f-e08c6210fb1c" />
+<img width="454" height="399" alt="image" src="https://github.com/user-attachments/assets/82822375-1072-4f2f-8abe-5a8240320620" />
 
 ---
 
