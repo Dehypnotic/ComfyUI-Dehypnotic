@@ -206,7 +206,11 @@ app.registerExtension({
     // =========================================================
     const container = document.createElement("div");
     container.style.cssText = `
+      display: flex;
+      flex-direction: column;
       width: 100%;
+      height: 100%;
+      box-sizing: border-box;
       border-radius: 4px;
       overflow: hidden;
       position: relative;

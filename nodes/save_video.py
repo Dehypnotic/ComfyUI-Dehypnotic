@@ -187,51 +187,178 @@ def _normalize_frames(images) -> List[np.ndarray]:
         out.append(a)
     return out
 
-def _build_video_only_cmd(ffmpeg_exe: str, w: int, h: int, fps: int,
-                          out_path: Path, codec_info: dict, container_info: dict,
-                          crf: int, preset: str) -> list:
-    cmd = [
-        ffmpeg_exe, "-y", "-hide_banner", "-loglevel", "error",
-        "-f", "rawvideo", "-vcodec", "rawvideo",
-        "-pix_fmt", "rgb24", "-s", f"{w}x{h}", "-r", str(fps),
-        "-i", "-"
-    ]
-    vf = "pad=ceil(iw/2)*2:ceil(ih/2)*2"
-    cmd += ["-vf", vf, "-c:v", codec_info["ffmpeg"]]
-    if codec_info.get("supports_preset"):
-        cmd += ["-preset", preset]
-    if codec_info.get("supports_crf"):
-        cmd += ["-crf", str(crf)]
-    pix_fmt = codec_info.get("pix_fmt")
-    if pix_fmt:
-        cmd += ["-pix_fmt", pix_fmt]
-    for extra in codec_info.get("args", []):
-        cmd += extra
-    cmd += ["-an"]
-    for extra in container_info.get("extra", []):
-        cmd += extra
-    cmd += [str(out_path)]
-    return cmd
+def _extract_frames_from_file(video_path: Path) -> List[np.ndarray]:
+    path_str = str(video_path)
+    frames: List[np.ndarray] = []
+    try:
+        import cv2
+        cap = cv2.VideoCapture(path_str)
+        if cap.isOpened():
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frames.append(frame)
+            cap.release()
+            if frames:
+                return frames
+    except Exception:
+        pass
+
+    try:
+        import imageio
+        reader = imageio.get_reader(path_str)
+        for frame in reader:
+            if frame.ndim == 3 and frame.shape[2] in (3, 4):
+                if frame.shape[2] == 4:
+                    frame = frame[:, :, :3]
+                frames.append(frame)
+        reader.close()
+        if frames:
+            return frames
+    except Exception:
+        pass
+
+    if imageio_ffmpeg is not None:
+        try:
+            reader = imageio_ffmpeg.read_frames(path_str)
+            meta = next(reader)
+            w, h = meta["size"]
+            for frame_bytes in reader:
+                frame = np.frombuffer(frame_bytes, dtype=np.uint8).reshape((h, w, 3))
+                frames.append(frame.copy())
+            if frames:
+                return frames
+        except Exception:
+            pass
+
+    return frames
+
+def _extract_audio_from_file(video_path: Path, ffmpeg_exe: str) -> Tuple[Optional[bytes], int, int]:
+    sample_rate = 44100
+    channels = 2
+    try:
+        cmd = [
+            ffmpeg_exe, "-y", "-i", str(video_path),
+            "-vn", "-acodec", "pcm_f32le", "-ar", str(sample_rate), "-ac", str(channels),
+            "-f", "f32le", "-"
+        ]
+        res = subprocess.run(cmd, capture_output=True, check=False)
+        if res.returncode == 0 and res.stdout and len(res.stdout) > 0:
+            return res.stdout, sample_rate, channels
+    except Exception:
+        pass
+    return None, sample_rate, channels
+
+def _resolve_video_file_path(video_item) -> Optional[Path]:
+    if isinstance(video_item, (str, Path)):
+        p = Path(str(video_item)).expanduser()
+        if p.exists() and p.is_file():
+            return p
+        try:
+            import folder_paths
+            for get_dir in (folder_paths.get_input_directory, folder_paths.get_output_directory, folder_paths.get_temp_directory):
+                try:
+                    cand = Path(get_dir()) / p
+                    if cand.exists() and cand.is_file():
+                        return cand
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    elif isinstance(video_item, dict):
+        for key in ("path", "filename", "video", "video_path", "file"):
+            if key in video_item and isinstance(video_item[key], (str, Path)):
+                p = _resolve_video_file_path(video_item[key])
+                if p:
+                    return p
+        if "filename" in video_item:
+            fn = video_item["filename"]
+            sub = video_item.get("subfolder", "")
+            tp = video_item.get("type", "output")
+            try:
+                import folder_paths
+                if tp == "input":
+                    base = Path(folder_paths.get_input_directory())
+                elif tp == "temp":
+                    base = Path(folder_paths.get_temp_directory())
+                else:
+                    base = Path(folder_paths.get_output_directory())
+                cand = base / sub / fn
+                if cand.exists() and cand.is_file():
+                    return cand
+            except Exception:
+                pass
+
+    elif isinstance(video_item, (tuple, list)):
+        if len(video_item) > 0 and isinstance(video_item[0], (str, Path, dict)):
+            return _resolve_video_file_path(video_item[0])
+
+    return None
+
+def _extract_frames_and_audio_from_video_input(video, ffmpeg_exe: str) -> Tuple[List[np.ndarray], Optional[bytes], int, int]:
+    video_path = _resolve_video_file_path(video)
+    if video_path:
+        frames = _extract_frames_from_file(video_path)
+        audio_bytes, sr, ch = _extract_audio_from_file(video_path, ffmpeg_exe)
+        return frames, audio_bytes, sr, ch
+
+    if isinstance(video, dict):
+        frames = None
+        for key in ("frames", "images", "image"):
+            if key in video:
+                try:
+                    frames = _normalize_frames(video[key])
+                    break
+                except Exception:
+                    pass
+        audio_bytes = None
+        sr = 44100
+        ch = 2
+        if "audio" in video:
+            a_obj = video["audio"]
+            if isinstance(a_obj, dict) and "waveform" in a_obj:
+                try:
+                    wf_data = a_obj["waveform"]
+                    sr = int(a_obj.get("sample_rate", 44100))
+                    import torch
+                    if isinstance(wf_data, torch.Tensor):
+                        wf = wf_data.detach().cpu().to(torch.float32)
+                        if wf.ndim == 3:
+                            wf = wf.squeeze(0)
+                        ch = int(wf.shape[0])
+                        audio_bytes = wf.transpose(0, 1).numpy().tobytes()
+                except Exception:
+                    pass
+        if frames:
+            return frames, audio_bytes, sr, ch
+
+    try:
+        frames = _normalize_frames(video)
+        return frames, None, 44100, 2
+    except Exception as exc:
+        raise ValueError(f"Unsupported video input format: {type(video).__name__}") from exc
 
 
 # --------------------------- node ---------------------------
 
 class SaveVideo:
     """
-    Save Video (simple) — minimal kontroller, audio som direkte input.
+    Save Video (simple) — minimal kontroller, audio og video som direkte inputs.
     """
     DESCRIPTION = (
     "Saves to ComfyUI/output by default. To allow external locations, create a file named "
 	" dehypnotic_save_allowed_paths.json containing for example: { \"allowed_roots\": [\"D:/ImageExports\", \"E:/TeamShare/Images\"] }. "
 	"Place it in <ComfyUI>/user/config/. Read the Github repository for more info. I have placed the settings number_paddings, number_start, "
-    "loop_still_to_audio, and show_progress in properties (rigkt click) and ComfyUI settings to keep the node compact."
+    "loop_still_to_audio, and show_progress in properties (right click) and ComfyUI settings to keep the node compact."
     )
 
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "images": ("IMAGE", {"tooltip": "Frame input. Batch data supported."}),
                 "file_path": ("STRING", {"default": "output/video", "tooltip": "Folder where the video is saved."}),
                 "date_subfolder_pattern": ("STRING", {"default": "%Y-%m-%d", "tooltip": "Optional strftime pattern or placeholders for subfolders."}),
                 "filename_prefix": ("STRING", {"default": "VID", "tooltip": "Filename prefix, e.g. VID_0001.mp4."}),
@@ -246,6 +373,8 @@ class SaveVideo:
                 "preset": (VALID_PRESETS, {"default": "fast", "tooltip": "Encoder speed versus quality (ultrafast ... veryslow)."}),
             },
             "optional": {
+                "images": ("IMAGE", {"tooltip": "Optional frame input. Batch data supported."}),
+                "video": ("VIDEO", {"tooltip": "Optional video input (video file path, video tensor batch, video dictionary, or VHS_VIDEO)."}),
                 "audio": ("AUDIO", {"tooltip": "Optional audio track. Mono/stereo supported."}),
                 "loop_still_to_audio": ("BOOLEAN", {"default": True, "tooltip": "If only one frame plus audio, loop the frame to match audio length.", "display": "property"}),
                 "show_progress": ("BOOLEAN", {"default": True, "tooltip": "Write progress information to the console.", "display": "property"}),
@@ -412,7 +541,6 @@ class SaveVideo:
 
     def save(
         self,
-        images,
         file_path,
         date_subfolder_pattern,
         filename_prefix,
@@ -425,6 +553,8 @@ class SaveVideo:
         fps=24.0,
         crf=23,
         preset="fast",
+        images=None,
+        video=None,
         audio=None,
         loop_still_to_audio=True,
         show_progress=True,
@@ -440,12 +570,26 @@ class SaveVideo:
                 msg += f" Import error: {_IMAGEIO_FFMPEG_ERROR}"
             raise RuntimeError(msg)
 
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
         is_preview_only = (str(preview_only).lower() == "on")
 
-        # --- Get Frames & Codec Info ---
-        frames = _normalize_frames(images)
+        # --- Get Frames & Video/Audio Extraction ---
+        frames: List[np.ndarray] = []
+        extracted_audio_bytes = None
+        extracted_sr = 44100
+        extracted_ch = 2
+
+        if video is not None:
+            frames, extracted_audio_bytes, extracted_sr, extracted_ch = (
+                _extract_frames_and_audio_from_video_input(video, ffmpeg_exe)
+            )
+        elif images is not None:
+            frames = _normalize_frames(images)
+        else:
+            raise ValueError("Save Video requires either 'images' or 'video' input.")
+
         if not frames:
-            raise ValueError("No frames provided.")
+            raise ValueError("No frames provided or extracted from input.")
 
         container_key = str(container).lower()
         codec_key = str(video_codec).lower()
@@ -556,6 +700,14 @@ class SaveVideo:
                 import traceback
                 traceback.print_exc()
 
+        elif extracted_audio_bytes is not None and acodec:
+            audio_bytes = extracted_audio_bytes
+            sample_rate = extracted_sr
+            channels = extracted_ch
+            if show_progress and audio_bytes:
+                dur_s = (len(audio_bytes) / (4 * channels)) / sample_rate if sample_rate else 0
+                print(f"[SaveVideo] Using audio extracted from video input: {channels}ch @ {sample_rate}Hz (~{dur_s:.2f}s, {len(audio_bytes)} bytes)")
+
         total_frames = len(frames)
         ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
 
@@ -665,4 +817,13 @@ class SaveVideo:
             }],
         }
 
-        return {"ui": ui, "result": (images, abs_path,)}
+        out_images = images
+        if out_images is None and frames:
+            try:
+                import torch
+                arr = np.stack(frames).astype(np.float32) / 255.0
+                out_images = torch.from_numpy(arr)
+            except Exception:
+                out_images = None
+
+        return {"ui": ui, "result": (out_images, abs_path,)}

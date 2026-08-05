@@ -2,10 +2,9 @@
 
 ## DOM Widget Scaling & Layout Guidelines (Pixaroma Architecture)
 
-When building or modifying ComfyUI custom nodes that utilize custom HTML/DOM widgets (`node.addDOMWidget`):
+When building ComfyUI custom nodes that utilize custom HTML/DOM widgets (`node.addDOMWidget`):
 
 1. **Avoid Hardcoded Widget Heights**:
-   - Never assign a static fixed height in `widget.computeSize` (e.g. `() => [width, 360]`).
    - Use `getMinHeight: () => MIN_H` (e.g., 140) and set `margin: 4` and `serialize: false`.
 
 2. **CSS Flexbox Structure**:

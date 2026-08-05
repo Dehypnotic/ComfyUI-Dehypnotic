@@ -309,18 +309,20 @@ A streamlined video loading node with an interactive frontend, built-in file upl
 A comprehensive video renderer and frame exporter node leveraging bundled `imageio-ffmpeg` for high quality video generation with optional audio multiplexing.
 
 #### Key Features:
+- **Flexible Inputs**: Connect either image frame batches (`IMAGE`) or video inputs (`VIDEO` file path, video tensor, or dictionary).
+- **Automatic Video & Audio Extraction**: When connecting a `VIDEO` input, frame sequences and audio tracks (if present and no external `AUDIO` is attached) are automatically extracted and passed through the encoding pipeline.
 - **Multiple Containers & Professional Codecs**:
   - Containers: `mp4`, `mkv`, `webm`, `mov`.
   - Codecs: H.264 (`libx264`), H.265/HEVC (`libx265`), VP9 (`libvpx-vp9`), AV1 (`libaom-av1`), ProRes 422 HQ (`prores_ks`), DNxHR HQ (`dnxhr_hq`).
 - **Audio Integration & Single-Frame Looping**: Attach mono or stereo `AUDIO`. If a single image frame and an audio track are provided, the node automatically loops the frame for the full duration of the audio.
-- **Frame Extraction & Selection**: Extract specific frames (e.g. first frame `0`, last frame `-2`, all frames `-1`, or explicit lists like `0,5,10`) to a subfolder during video export.
 - **Quality & Performance Tuning**: CRF (Constant Rate Factor) quality control, encoder speed presets (`ultrafast` to `veryslow`), and optional frame preview rendering in the node output.
 - **Preview Only Mode**: Toggle `preview_only` (`off`/`on`) to audition video previews in the node player without saving video files to disk (`off` by default).
 
 #### Key Inputs & Outputs:
 | Type | Name | Default / Options | Description |
 | :--- | :--- | :--- | :--- |
-| **Required Input** | `images` | `IMAGE` | Input video frame batch. |
+| **Optional Input** | `images` | `IMAGE` | Input video frame batch. |
+| **Optional Input** | `video` | `VIDEO` | Input video (file path, video tensor batch, video dictionary, or VHS_VIDEO). |
 | **Required Input** | `file_path` | `output/video` | Output destination folder. |
 | **Required Input** | `date_subfolder_pattern` | `%Y-%m-%d` | Dated subfolder format pattern. |
 | **Required Input** | `filename_prefix` | `VID` | Filename prefix. |
@@ -333,8 +335,6 @@ A comprehensive video renderer and frame exporter node leveraging bundled `image
 | **Required Input** | `preset` | `fast` (`ultrafast` ... `veryslow`) | Encoder speed vs. compression efficiency. |
 | **Optional Input** | `audio` | `AUDIO` | Optional audio track to mux into video. |
 | **Optional Input** | `loop_still_to_audio` | `True` | Loop single image to match audio duration. |
-| **Optional Input** | `frames_dir` | `""` | Subfolder name for extracted image frames. |
-| **Optional Input** | `frames_select` | `"-2"` | Frame selection criteria (`-2` last, `-1` all, `0` first, or list). |
 | **Output** | `images` | `IMAGE` | Passthrough image batch (or preview sequence). |
 | **Output** | `video_path` | `STRING` | File path of the saved output video. |
 
