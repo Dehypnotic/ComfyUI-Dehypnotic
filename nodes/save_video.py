@@ -482,8 +482,8 @@ class SaveVideo:
             },
             "optional": {
                 "images": ("IMAGE", {"tooltip": "Optional frame input. Batch data supported."}),
-                "video": ("VIDEO", {"tooltip": "Optional video input (video file path, video tensor batch, video dictionary, or VHS_VIDEO)."}),
                 "audio": ("AUDIO", {"tooltip": "Optional audio track. Mono/stereo supported."}),
+                "video": ("VIDEO", {"tooltip": "Optional video input (video file path, video tensor batch, video dictionary, or VHS_VIDEO)."}),
                 "loop_still_to_audio": ("BOOLEAN", {"default": True, "tooltip": "If only one frame plus audio, loop the frame to match audio length.", "display": "property"}),
                 "show_progress": ("BOOLEAN", {"default": True, "tooltip": "Write progress information to the console.", "display": "property"}),
             }
@@ -662,8 +662,8 @@ class SaveVideo:
         crf=23,
         preset="fast",
         images=None,
-        video=None,
         audio=None,
+        video=None,
         loop_still_to_audio=True,
         show_progress=True,
     ):

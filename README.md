@@ -322,7 +322,6 @@ A comprehensive video renderer and frame exporter node leveraging bundled `image
 | Type | Name | Default / Options | Description |
 | :--- | :--- | :--- | :--- |
 | **Optional Input** | `images` | `IMAGE` | Input video frame batch. |
-| **Optional Input** | `video` | `VIDEO` | Input video (file path, video tensor batch, video dictionary, or VHS_VIDEO). |
 | **Required Input** | `file_path` | `output/video` | Output destination folder. |
 | **Required Input** | `date_subfolder_pattern` | `%Y-%m-%d` | Dated subfolder format pattern. |
 | **Required Input** | `filename_prefix` | `VID` | Filename prefix. |
@@ -334,6 +333,7 @@ A comprehensive video renderer and frame exporter node leveraging bundled `image
 | **Required Input** | `crf` | `23` | Quality factor (lower = higher quality, 0–51). |
 | **Required Input** | `preset` | `fast` (`ultrafast` ... `veryslow`) | Encoder speed vs. compression efficiency. |
 | **Optional Input** | `audio` | `AUDIO` | Optional audio track to mux into video. |
+| **Optional Input** | `video` | `VIDEO` | Optional video input (file path, video tensor batch, video dictionary, or VHS_VIDEO). |
 | **Optional Input** | `loop_still_to_audio` | `True` | Loop single image to match audio duration. |
 | **Output** | `images` | `IMAGE` | Passthrough image batch (or preview sequence). |
 | **Output** | `video_path` | `STRING` | File path of the saved output video. |
