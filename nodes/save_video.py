@@ -187,6 +187,32 @@ def _normalize_frames(images) -> List[np.ndarray]:
         out.append(a)
     return out
 
+def _build_video_only_cmd(ffmpeg_exe: str, w: int, h: int, fps: int,
+                          out_path: Path, codec_info: dict, container_info: dict,
+                          crf: int, preset: str) -> list:
+    cmd = [
+        ffmpeg_exe, "-y", "-hide_banner", "-loglevel", "error",
+        "-f", "rawvideo", "-vcodec", "rawvideo",
+        "-pix_fmt", "rgb24", "-s", f"{w}x{h}", "-r", str(fps),
+        "-i", "-"
+    ]
+    vf = "pad=ceil(iw/2)*2:ceil(ih/2)*2"
+    cmd += ["-vf", vf, "-c:v", codec_info["ffmpeg"]]
+    if codec_info.get("supports_preset"):
+        cmd += ["-preset", preset]
+    if codec_info.get("supports_crf"):
+        cmd += ["-crf", str(crf)]
+    pix_fmt = codec_info.get("pix_fmt")
+    if pix_fmt:
+        cmd += ["-pix_fmt", pix_fmt]
+    for extra in codec_info.get("args", []):
+        cmd += extra
+    cmd += ["-an"]
+    for extra in container_info.get("extra", []):
+        cmd += extra
+    cmd += [str(out_path)]
+    return cmd
+
 def _extract_frames_from_file(video_path: Path) -> List[np.ndarray]:
     path_str = str(video_path)
     frames: List[np.ndarray] = []
@@ -296,15 +322,73 @@ def _resolve_video_file_path(video_item) -> Optional[Path]:
         if len(video_item) > 0 and isinstance(video_item[0], (str, Path, dict)):
             return _resolve_video_file_path(video_item[0])
 
+    elif hasattr(video_item, "get_stream_source") and callable(getattr(video_item, "get_stream_source")):
+        try:
+            src = video_item.get_stream_source()
+            if src and isinstance(src, (str, Path)):
+                return _resolve_video_file_path(src)
+        except Exception:
+            pass
+
     return None
 
 def _extract_frames_and_audio_from_video_input(video, ffmpeg_exe: str) -> Tuple[List[np.ndarray], Optional[bytes], int, int]:
+    # 1. ComfyUI VideoFromComponents / VideoFromFile / VideoInput objects with get_components()
+    if hasattr(video, "get_components") and callable(getattr(video, "get_components")):
+        try:
+            comp = video.get_components()
+            c_images = getattr(comp, "images", None)
+            c_audio = getattr(comp, "audio", None)
+
+            frames = None
+            if c_images is not None:
+                frames = _normalize_frames(c_images)
+
+            audio_bytes = None
+            sr = 44100
+            ch = 2
+
+            if c_audio is not None:
+                a_obj = c_audio
+                if hasattr(a_obj, "get_components") and callable(getattr(a_obj, "get_components")):
+                    a_obj = a_obj.get_components()
+
+                wf_data = None
+                if isinstance(a_obj, dict) and "waveform" in a_obj:
+                    wf_data = a_obj["waveform"]
+                    sr = int(a_obj.get("sample_rate", 44100))
+                elif hasattr(a_obj, "waveform"):
+                    wf_data = getattr(a_obj, "waveform")
+                    sr = int(getattr(a_obj, "sample_rate", 44100))
+
+                if wf_data is not None:
+                    import torch
+                    if isinstance(wf_data, torch.Tensor):
+                        wf = wf_data.detach().cpu().to(torch.float32)
+                        if wf.ndim == 3:
+                            wf = wf.squeeze(0)
+                        ch = int(wf.shape[0])
+                        audio_bytes = wf.transpose(0, 1).numpy().tobytes()
+                    elif isinstance(wf_data, np.ndarray):
+                        a = np.squeeze(wf_data)
+                        if a.ndim == 2 and a.shape[0] <= 8:
+                            a = a.T
+                        ch = int(a.shape[1])
+                        audio_bytes = a.astype(np.float32).tobytes()
+
+            if frames:
+                return frames, audio_bytes, sr, ch
+        except Exception as exc:
+            print(f"[SaveVideo] Warning: Exception parsing get_components() from video input: {exc}")
+
+    # 2. File path resolution (str, Path, dict containing path/filename, tuple, stream source)
     video_path = _resolve_video_file_path(video)
     if video_path:
         frames = _extract_frames_from_file(video_path)
         audio_bytes, sr, ch = _extract_audio_from_file(video_path, ffmpeg_exe)
         return frames, audio_bytes, sr, ch
 
+    # 3. Dictionary containing frames and optional audio
     if isinstance(video, dict):
         frames = None
         for key in ("frames", "images", "image"):
@@ -335,11 +419,35 @@ def _extract_frames_and_audio_from_video_input(video, ffmpeg_exe: str) -> Tuple[
         if frames:
             return frames, audio_bytes, sr, ch
 
+    # 4. Generic Python object attributes (.images, .frames, .video, .path)
+    if not isinstance(video, (str, Path, dict, tuple, list, np.ndarray)):
+        for attr in ("path", "filename", "file", "video_path"):
+            val = getattr(video, attr, None)
+            if val is not None:
+                p = _resolve_video_file_path(val)
+                if p:
+                    frames = _extract_frames_from_file(p)
+                    audio_bytes, sr, ch = _extract_audio_from_file(p, ffmpeg_exe)
+                    if frames:
+                        return frames, audio_bytes, sr, ch
+
+        for attr in ("images", "frames", "video", "components"):
+            val = getattr(video, attr, None)
+            if val is not None:
+                try:
+                    frames = _normalize_frames(val)
+                    if frames:
+                        return frames, None, 44100, 2
+                except Exception:
+                    pass
+
+    # 5. Direct tensor, numpy array, or list of frame tensors
     try:
         frames = _normalize_frames(video)
         return frames, None, 44100, 2
     except Exception as exc:
-        raise ValueError(f"Unsupported video input format: {type(video).__name__}") from exc
+        type_name = type(video).__name__
+        raise ValueError(f"Unsupported video input format: {type_name}") from exc
 
 
 # --------------------------- node ---------------------------
