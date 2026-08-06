@@ -208,8 +208,17 @@ function renderList(container, textWidget, node) {
         checkbox.style.height = "13px";
 
         checkbox.addEventListener("change", () => {
-            item.checked = checkbox.checked;
-            updateWidgetValue();
+            const isSingle = node.properties?.selection_mode === "single";
+            if (isSingle && checkbox.checked) {
+                items.forEach((otherItem, i) => {
+                    otherItem.checked = (i === index);
+                });
+                textWidget.value = serializeItems(items);
+                renderList(container, textWidget, node);
+            } else {
+                item.checked = checkbox.checked;
+                updateWidgetValue();
+            }
         });
         checkbox.addEventListener("mousedown", (e) => e.stopPropagation());
         checkbox.addEventListener("pointerdown", (e) => e.stopPropagation());
@@ -1237,7 +1246,11 @@ app.registerExtension({
                 const checkAllBtn = createButton("Check All", () => {
                     const currentText = textWidget.value || "";
                     const items = parseSerializedText(currentText);
-                    items.forEach(item => item.checked = true);
+                    if (node.properties?.selection_mode === "single") {
+                        items.forEach((item, idx) => item.checked = (idx === 0));
+                    } else {
+                        items.forEach(item => item.checked = true);
+                    }
                     textWidget.value = serializeItems(items);
                     renderList(listContainer, textWidget, node);
                 });
@@ -1325,6 +1338,51 @@ app.registerExtension({
                 saveBtn.style.flex = "none";
                 filePickerRow.insertBefore(saveBtn, fileSelect);
 
+                node.properties = node.properties || {};
+                if (!node.properties.selection_mode) {
+                    node.properties.selection_mode = "multi";
+                }
+
+                const singleMultiBtn = createButton("Multi", () => {
+                    const currentMode = node.properties.selection_mode || "multi";
+                    const newMode = currentMode === "single" ? "multi" : "single";
+                    node.properties.selection_mode = newMode;
+                    updateSingleMultiBtn();
+
+                    if (newMode === "single") {
+                        const currentText = textWidget.value || "";
+                        const items = parseSerializedText(currentText);
+                        const checkedCount = items.filter(it => it.checked).length;
+                        if (checkedCount > 1) {
+                            items.forEach(it => { it.checked = false; });
+                            textWidget.value = serializeItems(items);
+                            renderList(listContainer, textWidget, node);
+                        }
+                    }
+                    node.setDirtyCanvas(true, true);
+                });
+
+                const updateSingleMultiBtn = () => {
+                    const isSingle = node.properties.selection_mode === "single";
+                    singleMultiBtn.textContent = isSingle ? "Single" : "Multi";
+                    singleMultiBtn.title = isSingle
+                        ? "Single Mode: Only 1 checked item allowed. Checking a new item unchecks the previous one. Click to toggle to Multi mode."
+                        : "Multi Mode: Multiple checked items allowed. Click to toggle to Single mode.";
+
+                    if (isSingle) {
+                        singleMultiBtn.style.backgroundColor = "rgba(74, 144, 226, 0.25)";
+                        singleMultiBtn.style.borderColor = "#4a90e2";
+                        singleMultiBtn.style.color = "#60a5fa";
+                    } else {
+                        singleMultiBtn.style.backgroundColor = "#27272a";
+                        singleMultiBtn.style.borderColor = "#3f3f46";
+                        singleMultiBtn.style.color = "#34d399";
+                    }
+                };
+
+                updateSingleMultiBtn();
+
+                buttonContainer.appendChild(singleMultiBtn);
                 buttonContainer.appendChild(deleteBtn);
                 buttonContainer.appendChild(copyBtn);
                 buttonContainer.appendChild(pasteNewBtn);
@@ -1360,7 +1418,26 @@ app.registerExtension({
                 const origOnConfigure = node.onConfigure;
                 node.onConfigure = function (info) {
                     origOnConfigure?.apply(this, arguments);
+                    updateSingleMultiBtn();
                     renderList(listContainer, textWidget, node);
+                };
+
+                const origOnPropertyChanged = node.onPropertyChanged;
+                node.onPropertyChanged = function (name, value) {
+                    origOnPropertyChanged?.apply(this, arguments);
+                    if (name === "selection_mode") {
+                        updateSingleMultiBtn();
+                        if (value === "single") {
+                            const currentText = textWidget.value || "";
+                            const items = parseSerializedText(currentText);
+                            const checkedCount = items.filter(it => it.checked).length;
+                            if (checkedCount > 1) {
+                                items.forEach(it => { it.checked = false; });
+                                textWidget.value = serializeItems(items);
+                                renderList(listContainer, textWidget, node);
+                            }
+                        }
+                    }
                 };
 
                 const origOnRemoved = node.onRemoved;

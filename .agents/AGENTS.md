@@ -19,5 +19,6 @@ When building ComfyUI custom nodes that utilize custom HTML/DOM widgets (`node.a
    - Apply `installResizeFloor(container, measureFloorFn)` to lock minimum height during resize handle dragging in Nodes 2.0.
    - Implement `onResize` and `onDrawForeground` size clamping (`MIN_W`, `MIN_H`) for the Classic renderer.
 
-   4. **Limitations**:
-   - Don't change nodes that are not mentioned in the user request.
+   4. **General**:
+   - Don't change nodes that are not requested by the user.
+   - Update readme.md if necessary.
