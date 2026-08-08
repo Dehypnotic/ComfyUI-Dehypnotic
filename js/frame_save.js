@@ -541,6 +541,7 @@ app.registerExtension({
     // State for items & slider height
     let currentThumbHeight = DEFAULT_THUMB_HEIGHT;
     let framesData = []; // [{ filename, subfolder, type, frame_number, selected: false, el, imgEl }]
+    let lastClickedIndex = -1;
 
     // ── Build DOM elements ─────────────────────────────────────────────
     const root = document.createElement("div");
@@ -1173,6 +1174,7 @@ app.registerExtension({
       const gal = this._dhGalleryEl;
       gal.innerHTML = "";
       framesData = [];
+      lastClickedIndex = -1;
 
       imageInfos.forEach((info) => {
         const frameCard = document.createElement("div");
@@ -1189,6 +1191,8 @@ app.registerExtension({
           transition: height 0.15s, border 0.15s, opacity 0.15s, transform 0.1s;
           position: relative;
           box-sizing: border-box;
+          user-select: none;
+          -webkit-user-select: none;
         `;
 
         const img = document.createElement("img");
@@ -1222,10 +1226,23 @@ app.registerExtension({
         };
         framesData.push(itemData);
 
-        // Click frame to toggle selection
+        // Click frame to toggle selection (or range select with Shift)
         frameCard.onclick = (e) => {
           e.stopPropagation();
-          itemData.selected = !itemData.selected;
+          const currentIndex = framesData.indexOf(itemData);
+          if (e.shiftKey && lastClickedIndex !== -1 && lastClickedIndex < framesData.length) {
+            const start = Math.min(lastClickedIndex, currentIndex);
+            const end = Math.max(lastClickedIndex, currentIndex);
+            for (let i = start; i <= end; i++) {
+              if (framesData[i]) {
+                framesData[i].selected = true;
+              }
+            }
+            lastClickedIndex = currentIndex;
+          } else {
+            itemData.selected = !itemData.selected;
+            lastClickedIndex = currentIndex;
+          }
           updateSelectionVisuals();
         };
 

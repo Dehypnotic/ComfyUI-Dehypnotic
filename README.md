@@ -263,7 +263,7 @@ An interactive frame selection, inspection, and temporary saving node designed f
 - **Custom `[-]` & `[+]` Steppers**: Clean stepper buttons around `Start frame`, `End frame`, and `Step` fields for intuitive value adjustments.
 - **Live Upstream Frame Count**: Automatically traces input graph links recursively (past `Set/Get` wireless nodes, `AspectRatio`, and processing nodes) to detect and display the total frame count of connected video/image sources `(Total: N)` live before workflow execution.
 - **In-Browser Directory Picker Modal**: Built-in interactive folder browser modal (`📁`) that allows visual directory and drive navigation (`C:\`, `D:\`, `Output`, etc.) with zero browser upload security prompts.
-- **Full-Brightness Gallery & Fullscreen Zoom**: Scrollable 500px thumbnail gallery displaying filtered frames at 100% brightness with mint-green (`#34d399`) selection borders, double-click fullscreen zoom overlay, and instant "Select All" / "Deselect All" buttons. Default selection is set to none on first view.
+- **Full-Brightness Gallery & Fullscreen Zoom**: Scrollable 500px thumbnail gallery displaying filtered frames at 100% brightness with mint-green (`#34d399`) selection borders, double-click fullscreen zoom overlay, Shift + Click range selection, and instant "Select All" / "Deselect All" buttons. Default selection is set to none on first view.
 - **Security & Whitelist Validation**: Ensures saving to chosen target locations strictly obeys ComfyUI output path restrictions or custom allowed paths defined in `dehypnotic_save_allowed_paths.json`.
 
 #### Inputs & Outputs:
