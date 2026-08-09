@@ -1,7 +1,5 @@
 # Project Guidelines for ComfyUI-Dehypnotic
 
-Update this guide when the user expresses that a problem has been solved that probably will be usefull for future projects with JavaScript/DOM-nodes for ComfyUI.
-
 ## 1. Scope & Change Control
 - **Strict Node Scoping**: Never modify, refactor, or convert nodes that have not been explicitly requested by the user.
 - **Preserve Fixed Layouts**: Do not apply dynamic UI scaling to existing compact nodes unless specifically instructed.

@@ -1130,6 +1130,81 @@ app.registerExtension({
                     return btn;
                 };
 
+                node.properties = node.properties || {};
+                if (!node.properties.selection_mode) {
+                    node.properties.selection_mode = "multi";
+                }
+
+                const singleMultiBtn = createButton("Multi", () => {
+                    const currentMode = node.properties.selection_mode || "multi";
+                    const newMode = currentMode === "single" ? "multi" : "single";
+                    node.properties.selection_mode = newMode;
+                    updateSingleMultiBtn();
+
+                    if (newMode === "single") {
+                        const currentText = textWidget.value || "";
+                        const items = parseSerializedText(currentText);
+                        const checkedCount = items.filter(it => it.checked).length;
+                        if (checkedCount > 1) {
+                            items.forEach(it => { it.checked = false; });
+                            textWidget.value = serializeItems(items);
+                            renderList(listContainer, textWidget, node);
+                        }
+                    }
+                    node.setDirtyCanvas(true, true);
+                });
+                singleMultiBtn.style.flex = "none";
+                singleMultiBtn.style.padding = "3px 8px";
+
+                const updateSingleMultiBtn = () => {
+                    const isSingle = node.properties.selection_mode === "single";
+                    singleMultiBtn.textContent = isSingle ? "Single" : "Multi";
+                    singleMultiBtn.title = isSingle
+                        ? "Single Mode: Only 1 checked item allowed. Checking a new item unchecks the previous one. Click to toggle to Multi mode."
+                        : "Multi Mode: Multiple checked items allowed. Click to toggle to Single mode.";
+
+                    if (isSingle) {
+                        singleMultiBtn.style.backgroundColor = "rgba(74, 144, 226, 0.25)";
+                        singleMultiBtn.style.borderColor = "#4a90e2";
+                        singleMultiBtn.style.color = "#60a5fa";
+                    } else {
+                        singleMultiBtn.style.backgroundColor = "#27272a";
+                        singleMultiBtn.style.borderColor = "#3f3f46";
+                        singleMultiBtn.style.color = "#34d399";
+                    }
+                };
+
+                updateSingleMultiBtn();
+
+                swapRow.appendChild(singleMultiBtn);
+                swapRow.appendChild(fromStepper.wrap);
+                swapRow.appendChild(arrow);
+                swapRow.appendChild(toStepper.wrap);
+                swapRow.appendChild(swapBtn);
+                swapRow.appendChild(cloneBtn);
+                swapRow.appendChild(sepLabel);
+                swapRow.appendChild(sepInput);
+
+                const newBtn = createButton("New", () => {
+                    const currentText = textWidget.value || "";
+                    const items = parseSerializedText(currentText);
+                    items.push({ checked: false, text: "" });
+                    textWidget.value = serializeItems(items);
+                    renderList(listContainer, textWidget, node);
+
+                    setTimeout(() => {
+                        const lastRow = listContainer.children[listContainer.children.length - 1];
+                        if (lastRow) {
+                            const textarea = lastRow.querySelector("textarea");
+                            if (textarea) {
+                                textarea.focus();
+                            }
+                            lastRow.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                        }
+                    }, 10);
+                });
+                newBtn.title = "Create a new empty text at the next available number";
+
                 const unescapeString = (str) => {
                     return str.replace(/\\n/g, "\n").replace(/\\t/g, "\t").replace(/\\r/g, "\r");
                 };
@@ -1338,51 +1413,7 @@ app.registerExtension({
                 saveBtn.style.flex = "none";
                 filePickerRow.insertBefore(saveBtn, fileSelect);
 
-                node.properties = node.properties || {};
-                if (!node.properties.selection_mode) {
-                    node.properties.selection_mode = "multi";
-                }
-
-                const singleMultiBtn = createButton("Multi", () => {
-                    const currentMode = node.properties.selection_mode || "multi";
-                    const newMode = currentMode === "single" ? "multi" : "single";
-                    node.properties.selection_mode = newMode;
-                    updateSingleMultiBtn();
-
-                    if (newMode === "single") {
-                        const currentText = textWidget.value || "";
-                        const items = parseSerializedText(currentText);
-                        const checkedCount = items.filter(it => it.checked).length;
-                        if (checkedCount > 1) {
-                            items.forEach(it => { it.checked = false; });
-                            textWidget.value = serializeItems(items);
-                            renderList(listContainer, textWidget, node);
-                        }
-                    }
-                    node.setDirtyCanvas(true, true);
-                });
-
-                const updateSingleMultiBtn = () => {
-                    const isSingle = node.properties.selection_mode === "single";
-                    singleMultiBtn.textContent = isSingle ? "Single" : "Multi";
-                    singleMultiBtn.title = isSingle
-                        ? "Single Mode: Only 1 checked item allowed. Checking a new item unchecks the previous one. Click to toggle to Multi mode."
-                        : "Multi Mode: Multiple checked items allowed. Click to toggle to Single mode.";
-
-                    if (isSingle) {
-                        singleMultiBtn.style.backgroundColor = "rgba(74, 144, 226, 0.25)";
-                        singleMultiBtn.style.borderColor = "#4a90e2";
-                        singleMultiBtn.style.color = "#60a5fa";
-                    } else {
-                        singleMultiBtn.style.backgroundColor = "#27272a";
-                        singleMultiBtn.style.borderColor = "#3f3f46";
-                        singleMultiBtn.style.color = "#34d399";
-                    }
-                };
-
-                updateSingleMultiBtn();
-
-                buttonContainer.appendChild(singleMultiBtn);
+                buttonContainer.appendChild(newBtn);
                 buttonContainer.appendChild(deleteBtn);
                 buttonContainer.appendChild(copyBtn);
                 buttonContainer.appendChild(pasteNewBtn);
