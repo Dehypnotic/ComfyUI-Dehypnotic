@@ -409,6 +409,8 @@ A compact, interactive brainwave entrainment audio generator node featuring a dy
 | **Optional Input** | `points_json` | `STRING` | Serialized JSON array of frequency graph control points (includes timestamps and total duration). |
 | **Output** | `audio` | `AUDIO` | Generated audio dictionary containing waveform tensor and sample rate. |
 
+<img width="552" height="570" alt="image" src="https://github.com/user-attachments/assets/6e7c8901-1a30-4c09-94c9-1daac9913714" />
+
 ---
 
 ## Security and external save paths (ComfyUI Manager compliant)
