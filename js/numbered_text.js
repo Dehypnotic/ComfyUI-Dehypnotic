@@ -896,6 +896,7 @@ app.registerExtension({
                 const swapBtn = document.createElement("button");
                 swapBtn.type = "button";
                 swapBtn.textContent = "Swap";
+                swapBtn.title = "Swap content between the two specified line numbers";
                 swapBtn.style.backgroundColor = "#27272a";
                 swapBtn.style.border = "1px solid #3f3f46";
                 swapBtn.style.borderRadius = "3px";
@@ -973,6 +974,7 @@ app.registerExtension({
                 const cloneBtn = document.createElement("button");
                 cloneBtn.type = "button";
                 cloneBtn.textContent = "Clone";
+                cloneBtn.title = "Clone entry from first line number and insert at second line position";
                 cloneBtn.style.backgroundColor = "#27272a";
                 cloneBtn.style.border = "1px solid #3f3f46";
                 cloneBtn.style.borderRadius = "3px";
@@ -1064,6 +1066,7 @@ app.registerExtension({
                 const sepInput = document.createElement("input");
                 sepInput.type = "text";
                 sepInput.placeholder = ", ";
+                sepInput.title = "Delimiter used to join active entries when copying or outputting text";
                 sepInput.style.width = "48px";
                 sepInput.style.backgroundColor = "#2d2d2d";
                 sepInput.style.border = "1px solid #555";
@@ -1100,90 +1103,41 @@ app.registerExtension({
                     const btn = document.createElement("button");
                     btn.type = "button";
                     btn.textContent = text;
-                    btn.style.flex = "1 1 auto";
+                    btn.style.flex = "1 1 0px";
+                    btn.style.minWidth = "0";
                     btn.style.backgroundColor = "#27272a";
                     btn.style.border = "1px solid #3f3f46";
                     btn.style.borderRadius = "3px";
                     btn.style.color = "#34d399";
-                    btn.style.padding = "4px 6px";
+                    btn.style.padding = "4px 4px";
                     btn.style.fontSize = "9.5px";
                     btn.style.fontFamily = "sans-serif";
                     btn.style.cursor = "pointer";
                     btn.style.whiteSpace = "nowrap";
                     btn.style.textAlign = "center";
-                    btn.style.transition = "background 0.15s, border-color 0.15s, color 0.15s";
+                    btn.style.transition = "background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s";
                     btn.style.userSelect = "none";
 
                     btn.addEventListener("mouseover", () => {
+                        if (btn.disabled) return;
                         btn.style.backgroundColor = "rgba(16, 185, 129, 0.12)";
                         btn.style.borderColor = "#10b981";
                         btn.style.color = "#34d399";
                     });
                     btn.addEventListener("mouseout", () => {
+                        if (btn.disabled) return;
                         btn.style.backgroundColor = "#27272a";
                         btn.style.borderColor = "#3f3f46";
                         btn.style.color = "#34d399";
                     });
                     btn.addEventListener("mousedown", (e) => e.stopPropagation());
                     btn.addEventListener("pointerdown", (e) => e.stopPropagation());
-                    btn.addEventListener("click", onClick);
+                    btn.addEventListener("click", (e) => {
+                        if (btn.disabled) return;
+                        onClick(e);
+                    });
                     return btn;
                 };
-
-                node.properties = node.properties || {};
-                if (!node.properties.selection_mode) {
-                    node.properties.selection_mode = "multi";
-                }
-
-                const singleMultiBtn = createButton("Multi", () => {
-                    const currentMode = node.properties.selection_mode || "multi";
-                    const newMode = currentMode === "single" ? "multi" : "single";
-                    node.properties.selection_mode = newMode;
-                    updateSingleMultiBtn();
-
-                    if (newMode === "single") {
-                        const currentText = textWidget.value || "";
-                        const items = parseSerializedText(currentText);
-                        const checkedCount = items.filter(it => it.checked).length;
-                        if (checkedCount > 1) {
-                            items.forEach(it => { it.checked = false; });
-                            textWidget.value = serializeItems(items);
-                            renderList(listContainer, textWidget, node);
-                        }
-                    }
-                    node.setDirtyCanvas(true, true);
-                });
-                singleMultiBtn.style.flex = "none";
-                singleMultiBtn.style.padding = "3px 8px";
-
-                const updateSingleMultiBtn = () => {
-                    const isSingle = node.properties.selection_mode === "single";
-                    singleMultiBtn.textContent = isSingle ? "Single" : "Multi";
-                    singleMultiBtn.title = isSingle
-                        ? "Single Mode: Only 1 checked item allowed. Checking a new item unchecks the previous one. Click to toggle to Multi mode."
-                        : "Multi Mode: Multiple checked items allowed. Click to toggle to Single mode.";
-
-                    if (isSingle) {
-                        singleMultiBtn.style.backgroundColor = "rgba(74, 144, 226, 0.25)";
-                        singleMultiBtn.style.borderColor = "#4a90e2";
-                        singleMultiBtn.style.color = "#60a5fa";
-                    } else {
-                        singleMultiBtn.style.backgroundColor = "#27272a";
-                        singleMultiBtn.style.borderColor = "#3f3f46";
-                        singleMultiBtn.style.color = "#34d399";
-                    }
-                };
-
-                updateSingleMultiBtn();
-
-                swapRow.appendChild(singleMultiBtn);
-                swapRow.appendChild(fromStepper.wrap);
-                swapRow.appendChild(arrow);
-                swapRow.appendChild(toStepper.wrap);
-                swapRow.appendChild(swapBtn);
-                swapRow.appendChild(cloneBtn);
-                swapRow.appendChild(sepLabel);
-                swapRow.appendChild(sepInput);
 
                 const newBtn = createButton("New", () => {
                     const currentText = textWidget.value || "";
@@ -1203,13 +1157,13 @@ app.registerExtension({
                         }
                     }, 10);
                 });
-                newBtn.title = "Create a new empty text at the next available number";
+                newBtn.title = "Create a new empty entry at the next available number";
 
                 const unescapeString = (str) => {
                     return str.replace(/\\n/g, "\n").replace(/\\t/g, "\t").replace(/\\r/g, "\r");
                 };
 
-                const deleteBtn = createButton("Delete Checked", () => {
+                const deleteBtn = createButton("Delete", () => {
                     const currentText = textWidget.value || "";
                     let items = parseSerializedText(currentText);
                     items = items.filter(item => !item.checked);
@@ -1219,8 +1173,9 @@ app.registerExtension({
                     textWidget.value = serializeItems(items);
                     renderList(listContainer, textWidget, node);
                 });
+                deleteBtn.title = "Delete all checked entries from the list";
 
-                const copyBtn = createButton("Copy Checked", () => {
+                const copyBtn = createButton("Copy", () => {
                     const currentText = textWidget.value || "";
                     const items = parseSerializedText(currentText);
                     const selectedTexts = items.filter(item => item.checked).map(item => item.text).filter(t => t !== "");
@@ -1248,7 +1203,7 @@ app.registerExtension({
 
                     navigator.clipboard.writeText(textToCopy).then(() => {
                         setTimeout(() => {
-                            copyBtn.textContent = "Copy Checked";
+                            copyBtn.textContent = "Copy";
                             copyBtn.style.backgroundColor = "#27272a";
                             copyBtn.style.color = "#34d399";
                         }, 1500);
@@ -1258,14 +1213,15 @@ app.registerExtension({
                         copyBtn.style.backgroundColor = "#962828";
                         copyBtn.style.color = "#fff";
                         setTimeout(() => {
-                            copyBtn.textContent = "Copy Checked";
+                            copyBtn.textContent = "Copy";
                             copyBtn.style.backgroundColor = "#27272a";
                             copyBtn.style.color = "#34d399";
                         }, 1500);
                     });
                 });
+                copyBtn.title = "Copy all checked entries to clipboard (joined by separator)";
 
-                const pasteNewBtn = createButton("Paste New", async () => {
+                const pasteNewBtn = createButton("Paste", async () => {
                     try {
                         const clipboardText = await navigator.clipboard.readText();
                         if (!clipboardText) {
@@ -1273,7 +1229,7 @@ app.registerExtension({
                             pasteNewBtn.style.backgroundColor = "#962828";
                             pasteNewBtn.style.color = "#fff";
                             setTimeout(() => {
-                                pasteNewBtn.textContent = "Paste New";
+                                pasteNewBtn.textContent = "Paste";
                                 pasteNewBtn.style.backgroundColor = "#27272a";
                                 pasteNewBtn.style.color = "#34d399";
                             }, 1500);
@@ -1301,7 +1257,7 @@ app.registerExtension({
                         pasteNewBtn.style.color = "#fff";
 
                         setTimeout(() => {
-                            pasteNewBtn.textContent = "Paste New";
+                            pasteNewBtn.textContent = "Paste";
                             pasteNewBtn.style.backgroundColor = "#27272a";
                             pasteNewBtn.style.color = "#34d399";
                         }, 1500);
@@ -1311,24 +1267,23 @@ app.registerExtension({
                         pasteNewBtn.style.backgroundColor = "#962828";
                         pasteNewBtn.style.color = "#fff";
                         setTimeout(() => {
-                            pasteNewBtn.textContent = "Paste New";
+                            pasteNewBtn.textContent = "Paste";
                             pasteNewBtn.style.backgroundColor = "#27272a";
                             pasteNewBtn.style.color = "#34d399";
                         }, 1500);
                     }
                 });
+                pasteNewBtn.title = "Paste text from clipboard as a new entry";
 
                 const checkAllBtn = createButton("Check All", () => {
+                    if (node.properties?.selection_mode === "single") return;
                     const currentText = textWidget.value || "";
                     const items = parseSerializedText(currentText);
-                    if (node.properties?.selection_mode === "single") {
-                        items.forEach((item, idx) => item.checked = (idx === 0));
-                    } else {
-                        items.forEach(item => item.checked = true);
-                    }
+                    items.forEach(item => item.checked = true);
                     textWidget.value = serializeItems(items);
                     renderList(listContainer, textWidget, node);
                 });
+                checkAllBtn.title = "Check all entries in the list";
 
                 const uncheckAllBtn = createButton("Uncheck All", () => {
                     const currentText = textWidget.value || "";
@@ -1337,6 +1292,75 @@ app.registerExtension({
                     textWidget.value = serializeItems(items);
                     renderList(listContainer, textWidget, node);
                 });
+                uncheckAllBtn.title = "Uncheck all entries in the list";
+
+                node.properties = node.properties || {};
+                if (!node.properties.selection_mode) {
+                    node.properties.selection_mode = "multi";
+                }
+
+                const singleMultiBtn = createButton("Multi", () => {
+                    const currentMode = node.properties.selection_mode || "multi";
+                    const newMode = currentMode === "single" ? "multi" : "single";
+                    node.properties.selection_mode = newMode;
+                    updateSingleMultiBtn();
+
+                    if (newMode === "single") {
+                        const currentText = textWidget.value || "";
+                        const items = parseSerializedText(currentText);
+                        const checkedCount = items.filter(it => it.checked).length;
+                        if (checkedCount > 1) {
+                            items.forEach(it => { it.checked = false; });
+                            textWidget.value = serializeItems(items);
+                            renderList(listContainer, textWidget, node);
+                        }
+                    }
+                    node.setDirtyCanvas(true, true);
+                });
+                singleMultiBtn.style.flex = "none";
+                singleMultiBtn.style.width = "48px";
+                singleMultiBtn.style.boxSizing = "border-box";
+                singleMultiBtn.style.padding = "3px 0";
+                singleMultiBtn.style.textAlign = "center";
+
+                const updateSingleMultiBtn = () => {
+                    const isSingle = node.properties.selection_mode === "single";
+                    singleMultiBtn.textContent = isSingle ? "Single" : "Multi";
+                    singleMultiBtn.title = isSingle
+                        ? "Single Mode: Only 1 checked item allowed. Checking a new item unchecks the previous one. Click to toggle to Multi mode."
+                        : "Multi Mode: Multiple checked items allowed. Click to toggle to Single mode.";
+
+                    if (isSingle) {
+                        singleMultiBtn.style.backgroundColor = "rgba(74, 144, 226, 0.25)";
+                        singleMultiBtn.style.borderColor = "#4a90e2";
+                        singleMultiBtn.style.color = "#60a5fa";
+
+                        checkAllBtn.disabled = true;
+                        checkAllBtn.style.opacity = "0.35";
+                        checkAllBtn.style.cursor = "not-allowed";
+                        checkAllBtn.title = "Check All is disabled in Single selection mode";
+                    } else {
+                        singleMultiBtn.style.backgroundColor = "#27272a";
+                        singleMultiBtn.style.borderColor = "#3f3f46";
+                        singleMultiBtn.style.color = "#34d399";
+
+                        checkAllBtn.disabled = false;
+                        checkAllBtn.style.opacity = "1";
+                        checkAllBtn.style.cursor = "pointer";
+                        checkAllBtn.title = "Check all entries in the list";
+                    }
+                };
+
+                updateSingleMultiBtn();
+
+                swapRow.appendChild(singleMultiBtn);
+                swapRow.appendChild(fromStepper.wrap);
+                swapRow.appendChild(arrow);
+                swapRow.appendChild(toStepper.wrap);
+                swapRow.appendChild(swapBtn);
+                swapRow.appendChild(cloneBtn);
+                swapRow.appendChild(sepLabel);
+                swapRow.appendChild(sepInput);
 
                 const saveBtn = createButton("Save", async () => {
                     const items = parseSerializedText(textWidget.value || "");
