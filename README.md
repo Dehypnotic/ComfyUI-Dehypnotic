@@ -20,6 +20,7 @@ A suite of feature-rich, high-performance custom nodes for [ComfyUI](https://git
   - [🧘 Load Video (Dehypnotic)](#-load-video-dehypnotic)
   - [🧘 Save Video (Dehypnotic)](#-save-video-dehypnotic)
   - [🧘 SonicColor Noise (Dehypnotic)](#-soniccolor-noise-dehypnotic)
+  - [🧘 BrainwaveSync (Dehypnotic)](#-brainwavesync-dehypnotic)
 - [Security and External Save Paths](#security-and-external-save-paths-comfyui-manager-compliant)
 - [Installation](#installation)
 - [License](#license)
@@ -378,6 +379,35 @@ A feature-rich noise generator and audio processor with an embedded dark GUI int
     <th><img width="411" height="556" alt="image" src="https://github.com/user-attachments/assets/c327c9e6-d368-49e2-b23e-6110b5724c4a" /></th>
   </tr>
 </table>
+
+---
+
+### 🧘 BrainwaveSync (Dehypnotic)
+**Class Name**: `BrainwaveSync`  
+**Category**: `Dehypnotic/🔊 Audio`
+
+A compact, interactive brainwave entrainment audio generator node featuring a dynamic HTML5 canvas graph editor, preset manager, Web Audio live preview, and high-quality audio output generation (Isochronic pulses or Binaural beats).
+
+#### Key Features:
+- **Interactive Frequency-over-Time Graph**: Click, double-click, or Shift-click to add points, drag points to adjust beat frequencies, and right-click to delete. Automatically resizes with the node boundaries.
+- **Isochronic & Binaural Modes**:
+  - **Isochronic**: Synthesizes mono audio with carrier frequency modulated by triangular pulse envelopes.
+  - **Binaural**: Synthesizes stereo audio with dual carrier frequencies ($f_{left} = f_{carrier}$, $f_{right} = f_{carrier} + f_{beat}$).
+- **Web Audio Live Preview**: Integrated ▶️ Play / ⏹ Stop browser audio engine to preview entrainment sessions live.
+- **Preset Management**: Load, save, duplicate, and delete custom sessions saved in `ComfyUI/user/Dehypnotic/brainwave_sync/`.
+- **Grid Snapping**: Time snapping (Off, 10s, 30s, 1m, 5m) and Hz snapping (Off, 0.1Hz, 0.5Hz, 1.0Hz) for precise curve editing.
+- **Audio Output Pipeline**: Direct `AUDIO` dict output (`waveform` tensor + `sample_rate`) ready for `Save Audio (Dehypnotic)` or standard ComfyUI audio nodes.
+
+#### Inputs & Outputs:
+| Type | Name | Data Type | Description |
+| :--- | :--- | :--- | :--- |
+| **Required Input** | `carrier_hz` | `FLOAT` | Carrier tone frequency in Hz (e.g. 200 Hz). |
+| **Required Input** | `beat_mode` | `COMBO` | Beat generation mode (`Isochronic` or `Binaural`). |
+| **Required Input** | `volume` | `FLOAT` | Master volume scaling (0.0 to 1.0). |
+| **Required Input** | `sample_rate` | `INT` | Audio sample rate (default 44100 Hz). |
+| **Optional Input** | `preset_name` | `STRING` | Selected preset name. |
+| **Optional Input** | `points_json` | `STRING` | Serialized JSON array of frequency graph control points (includes timestamps and total duration). |
+| **Output** | `audio` | `AUDIO` | Generated audio dictionary containing waveform tensor and sample rate. |
 
 ---
 

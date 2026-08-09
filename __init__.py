@@ -9,6 +9,7 @@ from .nodes.load_video import LoadVideo
 from .nodes.numbered_text import NumberedText
 from .nodes.text import TextDehypnotic
 from .nodes.sonic_color import SonicColor
+from .nodes.brainwave_sync import BrainwaveSync
 from .nodes import user_preset_api
 from .nodes import sonic_color_api
 
@@ -24,7 +25,8 @@ NODE_CLASS_MAPPINGS = {
     "LoadVideoDehypnotic": LoadVideo,
     "dehypnotic_NumberedText": NumberedText,
     "dehypnotic_Text": TextDehypnotic,
-    "SonicColor": SonicColor
+    "SonicColor": SonicColor,
+    "BrainwaveSync": BrainwaveSync
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "dehypnotic_RangeToString": "🧘 RangeToString (Dehypnotic)",
@@ -38,7 +40,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LoadVideoDehypnotic": "🧘 Load Video (Dehypnotic)",
     "dehypnotic_NumberedText": "🧘 NumberedText (Dehypnotic)",
     "dehypnotic_Text": "🧘 Text (Dehypnotic)",
-    "SonicColor": "🧘 SonicColor Noise (Dehypnotic)"
+    "SonicColor": "🧘 SonicColor Noise (Dehypnotic)",
+    "BrainwaveSync": "🧘 BrainwaveSync (Dehypnotic)"
 }
 WEB_DIRECTORY = "./js"
 

@@ -16,7 +16,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 def _get_target_dir(type_name: str) -> Path:
-    if type_name not in {"numbered_text", "text"}:
+    if type_name not in {"numbered_text", "text", "brainwave_sync"}:
         raise ValueError(f"Invalid preset type: {type_name}")
     user_dir = Path(folder_paths.get_user_directory()).resolve()
     target_dir = user_dir / "Dehypnotic" / type_name
@@ -28,7 +28,7 @@ def _migrate_legacy_files(type_name: str, target_dir: Path) -> None:
         user_dir = Path(folder_paths.get_user_directory()).resolve()
         legacy_dir = user_dir / "default" / "Dehypnotic" / type_name
         if legacy_dir.exists() and legacy_dir.is_dir():
-            ext = ".json" if type_name == "numbered_text" else ".txt"
+            ext = ".json" if type_name in {"numbered_text", "brainwave_sync"} else ".txt"
             for item in legacy_dir.iterdir():
                 if item.is_file() and item.name.lower().endswith(ext):
                     dest = target_dir / item.name
@@ -43,7 +43,7 @@ def _get_safe_filepath(type_name: str, filename: str) -> Path:
     _migrate_legacy_files(type_name, target_dir)
 
     clean_filename = os.path.basename(filename).strip()
-    ext = ".json" if type_name == "numbered_text" else ".txt"
+    ext = ".json" if type_name in {"numbered_text", "brainwave_sync"} else ".txt"
     if not clean_filename.lower().endswith(ext):
         clean_filename = f"{clean_filename}{ext}"
 
@@ -61,7 +61,7 @@ if PromptServer is not None:
             target_dir = _get_target_dir(type_name)
             _migrate_legacy_files(type_name, target_dir)
 
-            ext = ".json" if type_name == "numbered_text" else ".txt"
+            ext = ".json" if type_name in {"numbered_text", "brainwave_sync"} else ".txt"
             files = []
             for f in target_dir.iterdir():
                 if f.is_file() and f.name.lower().endswith(ext):
@@ -91,7 +91,7 @@ if PromptServer is not None:
             if target_path.exists() and not overwrite:
                 return web.json_response({"error": "File already exists"}, status=409)
 
-            if type_name == "numbered_text" and isinstance(content, (dict, list)):
+            if type_name in {"numbered_text", "brainwave_sync"} and isinstance(content, (dict, list)):
                 import json
                 content_str = json.dumps(content, indent=2)
             else:
@@ -119,7 +119,7 @@ if PromptServer is not None:
             with open(target_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            if type_name == "numbered_text":
+            if type_name in {"numbered_text", "brainwave_sync"}:
                 import json
                 try:
                     data = json.loads(content)
