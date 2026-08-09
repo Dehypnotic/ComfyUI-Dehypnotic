@@ -28,3 +28,15 @@ Use the following pattern as the standard reference when building **new DOM-widg
    - Use `installResizeFloor(container, measureFloorFn)` to enforce minimum height floor during resize handle dragging in Nodes 2.0.
    - Implement `onResize` and `onDrawForeground` size clamping (`MIN_W`, `MIN_H`) for Classic LiteGraph renderer.
 
+## 3. User Storage & Preset Directory Standard
+- **Storage Location**: User presets, templates, and user-generated node data should be saved in a node-specific subdirectory under `ComfyUI/user/Dehypnotic/<node_name>` (e.g., `ComfyUI/user/Dehypnotic/numbered_text`).
+- **ComfyUI Path API**: Always resolve the base directory using ComfyUI's standard `folder_paths.get_user_directory()` function:
+  ```python
+  import folder_paths
+  from pathlib import Path
+
+  user_dir = Path(folder_paths.get_user_directory()).resolve()
+  target_dir = user_dir / "Dehypnotic" / "<node_name>"
+  target_dir.mkdir(parents=True, exist_ok=True)
+  ```
+- **Naming Convention**: Directory names beneath `Dehypnotic/` must reflect the node's name or type to keep user presets organized.
