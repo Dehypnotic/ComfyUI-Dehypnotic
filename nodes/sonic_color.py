@@ -147,76 +147,7 @@ class SonicColor:
         a = np.array([1.0, a1 / a0, a2 / a0], dtype=np.float64)
         return signal.lfilter(b, a, x).astype(np.float32)
 
-    def generate_noise(self, params: str = "{}", audio: dict = None, unique_id: str = None, **kwargs):
-        data = {}
-        if isinstance(params, str) and params.strip():
-            try:
-                data = json.loads(params)
-            except Exception:
-                data = {}
-        elif isinstance(params, dict):
-            data = params
-
-        for k, v in kwargs.items():
-            if k not in data or data[k] is None:
-                data[k] = v
-
-        hours = int(data.get("hours", 0))
-        minutes = int(data.get("minutes", 1))
-        seconds = int(math.ceil(float(data.get("seconds", 0.0))))
-        sample_rate = int(data.get("sample_rate", 44100))
-        stereo = bool(data.get("stereo", True))
-        preset = str(data.get("preset", "New Preset"))
-        audio_input_vol = float(data.get("audio_input_vol", 1.0))
-
-        # Preset override if selected
-        preset_data = load_preset_file(preset)
-        if preset not in ["New Preset", "Custom"] and preset_data is not None:
-            for k, v in preset_data.items():
-                if k not in ["hours", "minutes", "seconds", "sample_rate", "stereo", "audio_input_vol"]:
-                    data[k] = v
-
-        # If audio input is provided and duration is 0, auto-set duration to match incoming audio length
-        in_audio_np = None
-        in_duration_sec = 0.0
-        if audio is not None and isinstance(audio, dict) and "waveform" in audio:
-            try:
-                in_wf = audio["waveform"] # shape (batch, channels, samples) or (channels, samples)
-                in_sr = audio.get("sample_rate", sample_rate)
-
-                if isinstance(in_wf, torch.Tensor):
-                    in_wf = in_wf.cpu().numpy()
-
-                in_wf = np.squeeze(in_wf)
-                if in_wf.ndim == 1:
-                    in_audio_np = in_wf
-                elif in_wf.ndim >= 2:
-                    in_audio_np = np.mean(in_wf, axis=0) # convert to mono for mixing
-
-                in_num_samples = len(in_audio_np)
-                in_duration_sec = in_num_samples / float(in_sr)
-
-                # Resample input audio if sample rates differ
-                if in_sr != sample_rate and signal is not None and in_num_samples > 0:
-                    target_samples = int(in_duration_sec * sample_rate)
-                    in_audio_np = signal.resample(in_audio_np, target_samples)
-
-                # If duration set by user is 0, use incoming audio duration (rounded up to whole seconds)
-                if hours == 0 and minutes == 0 and seconds <= 0:
-                    total_seconds = float(math.ceil(in_duration_sec))
-                else:
-                    total_seconds = float(hours * 3600 + minutes * 60 + seconds)
-            except Exception as e:
-                logger.warning(f"[SonicColor] Error reading audio input: {e}")
-                total_seconds = float(hours * 3600 + minutes * 60 + seconds)
-        else:
-            total_seconds = float(hours * 3600 + minutes * 60 + seconds)
-
-        if total_seconds <= 0:
-            total_seconds = 1.0  # fallback to 1 sec minimum if set to 0
-
-        num_samples = int(total_seconds * sample_rate)
-
+    def _generate_single_channel(self, num_samples: int, data: dict, sample_rate: int) -> np.ndarray:
         # 1. White Noise
         white = np.random.uniform(-1.0, 1.0, size=num_samples).astype(np.float64)
 
@@ -306,6 +237,86 @@ class SonicColor:
                     fc = min(freq, sample_rate * 0.49)
                     mixed = self._biquad_filter(mixed, fc, sample_rate, 1.0, f_type, db_gain=gain_db)
 
+        return mixed
+
+    def generate_noise(self, params: str = "{}", audio: dict = None, unique_id: str = None, **kwargs):
+        data = {}
+        if isinstance(params, str) and params.strip():
+            try:
+                data = json.loads(params)
+            except Exception:
+                data = {}
+        elif isinstance(params, dict):
+            data = params
+
+        for k, v in kwargs.items():
+            if k not in data or data[k] is None:
+                data[k] = v
+
+        hours = int(data.get("hours", 0))
+        minutes = int(data.get("minutes", 1))
+        seconds = int(math.ceil(float(data.get("seconds", 0.0))))
+        sample_rate = int(data.get("sample_rate", 44100))
+        stereo = bool(data.get("stereo", True))
+        preset = str(data.get("preset", "New Preset"))
+        audio_input_vol = float(data.get("audio_input_vol", 1.0))
+
+        # Preset override if selected
+        preset_data = load_preset_file(preset)
+        if preset not in ["New Preset", "Custom"] and preset_data is not None:
+            for k, v in preset_data.items():
+                if k not in ["hours", "minutes", "seconds", "sample_rate", "stereo", "audio_input_vol"]:
+                    data[k] = v
+
+        # If audio input is provided and duration is 0, auto-set duration to match incoming audio length
+        in_audio_np = None
+        in_duration_sec = 0.0
+        if audio is not None and isinstance(audio, dict) and "waveform" in audio:
+            try:
+                in_wf = audio["waveform"] # shape (batch, channels, samples) or (channels, samples)
+                in_sr = audio.get("sample_rate", sample_rate)
+
+                if isinstance(in_wf, torch.Tensor):
+                    in_wf = in_wf.cpu().numpy()
+
+                in_wf = np.squeeze(in_wf)
+                if in_wf.ndim == 1:
+                    in_audio_np = in_wf
+                elif in_wf.ndim >= 2:
+                    in_audio_np = np.mean(in_wf, axis=0) # convert to mono for mixing
+
+                in_num_samples = len(in_audio_np)
+                in_duration_sec = in_num_samples / float(in_sr)
+
+                # Resample input audio if sample rates differ
+                if in_sr != sample_rate and signal is not None and in_num_samples > 0:
+                    target_samples = int(in_duration_sec * sample_rate)
+                    in_audio_np = signal.resample(in_audio_np, target_samples)
+
+                # If duration set by user is 0, use incoming audio duration (rounded up to whole seconds)
+                if hours == 0 and minutes == 0 and seconds <= 0:
+                    total_seconds = float(math.ceil(in_duration_sec))
+                else:
+                    total_seconds = float(hours * 3600 + minutes * 60 + seconds)
+            except Exception as e:
+                logger.warning(f"[SonicColor] Error reading audio input: {e}")
+                total_seconds = float(hours * 3600 + minutes * 60 + seconds)
+        else:
+            total_seconds = float(hours * 3600 + minutes * 60 + seconds)
+
+        if total_seconds <= 0:
+            total_seconds = 1.0  # fallback to 1 sec minimum if set to 0
+
+        num_samples = int(total_seconds * sample_rate)
+
+        if stereo:
+            ch_left = self._generate_single_channel(num_samples, data, sample_rate)
+            ch_right = self._generate_single_channel(num_samples, data, sample_rate)
+            channels_list = [ch_left, ch_right]
+        else:
+            ch_mono = self._generate_single_channel(num_samples, data, sample_rate)
+            channels_list = [ch_mono]
+
         # ADSR Envelope
         attack = float(data.get("attack", 0.1))
         decay = float(data.get("decay", 0.3))
@@ -341,26 +352,29 @@ class SonicColor:
         if r_samp > 0:
             env[idx:idx + r_samp] = np.linspace(sustain, 0.0, r_samp, dtype=np.float32)
 
-        mixed = mixed * env
-
         volume = float(data.get("volume", 0.5))
-        mixed = mixed * (volume * 0.5)
 
-        # Mix in external audio input if connected (NO REPEAT/LOOPING: Play ONCE, pad remainder with silence!)
-        if in_audio_np is not None and audio_input_vol > 0.001:
-            in_len = len(in_audio_np)
-            if in_len < num_samples:
-                in_padded = np.zeros(num_samples, dtype=np.float32)
-                in_padded[:in_len] = in_audio_np
-            else:
-                in_padded = in_audio_np[:num_samples]
+        processed_channels = []
+        for ch in channels_list:
+            ch = ch * env * (volume * 0.5)
 
-            mixed = mixed + (in_padded.astype(np.float32) * audio_input_vol)
+            # Mix in external audio input if connected (NO REPEAT/LOOPING: Play ONCE, pad remainder with silence!)
+            if in_audio_np is not None and audio_input_vol > 0.001:
+                in_len = len(in_audio_np)
+                if in_len < num_samples:
+                    in_padded = np.zeros(num_samples, dtype=np.float32)
+                    in_padded[:in_len] = in_audio_np
+                else:
+                    in_padded = in_audio_np[:num_samples]
+
+                ch = ch + (in_padded.astype(np.float32) * audio_input_vol)
+
+            processed_channels.append(ch)
 
         if stereo:
-            waveform_data = np.stack([mixed, mixed], axis=0)
+            waveform_data = np.stack(processed_channels, axis=0)
         else:
-            waveform_data = mixed[np.newaxis, :]
+            waveform_data = processed_channels[0][np.newaxis, :]
 
         waveform_tensor = torch.from_numpy(waveform_data).unsqueeze(0).float()
 
