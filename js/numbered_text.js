@@ -535,10 +535,10 @@ app.registerExtension({
                 const fileSelect = document.createElement("select");
                 fileSelect.style.flex = "1 1 100px";
                 fileSelect.style.minWidth = "50px";
-                fileSelect.style.backgroundColor = "#2d2d2d";
-                fileSelect.style.border = "1px solid #555";
+                fileSelect.style.backgroundColor = "#121212";
+                fileSelect.style.border = "1px solid #3f3f46";
                 fileSelect.style.borderRadius = "3px";
-                fileSelect.style.color = "#ccc";
+                fileSelect.style.color = "#eee";
                 fileSelect.style.fontSize = "10px";
                 fileSelect.style.padding = "2px 4px";
                 fileSelect.style.cursor = "pointer";
@@ -1099,7 +1099,7 @@ app.registerExtension({
                 swapRow.appendChild(sepInput);
 
                 // --- Button Helper ---
-                const createButton = (text, onClick) => {
+                const createButton = (text, onClick, textColor = "#34d399") => {
                     const btn = document.createElement("button");
                     btn.type = "button";
                     btn.textContent = text;
@@ -1108,7 +1108,7 @@ app.registerExtension({
                     btn.style.backgroundColor = "#27272a";
                     btn.style.border = "1px solid #3f3f46";
                     btn.style.borderRadius = "3px";
-                    btn.style.color = "#34d399";
+                    btn.style.color = textColor;
                     btn.style.padding = "4px 4px";
                     btn.style.fontSize = "9.5px";
                     btn.style.fontFamily = "sans-serif";
@@ -1120,15 +1120,20 @@ app.registerExtension({
 
                     btn.addEventListener("mouseover", () => {
                         if (btn.disabled) return;
-                        btn.style.backgroundColor = "rgba(16, 185, 129, 0.12)";
-                        btn.style.borderColor = "#10b981";
-                        btn.style.color = "#34d399";
+                        if (textColor === "#fca5a5") {
+                            btn.style.backgroundColor = "rgba(239, 68, 68, 0.12)";
+                            btn.style.borderColor = "#ef4444";
+                        } else {
+                            btn.style.backgroundColor = "rgba(16, 185, 129, 0.12)";
+                            btn.style.borderColor = "#10b981";
+                        }
+                        btn.style.color = textColor;
                     });
                     btn.addEventListener("mouseout", () => {
                         if (btn.disabled) return;
                         btn.style.backgroundColor = "#27272a";
                         btn.style.borderColor = "#3f3f46";
-                        btn.style.color = "#34d399";
+                        btn.style.color = textColor;
                     });
                     btn.addEventListener("mousedown", (e) => e.stopPropagation());
                     btn.addEventListener("pointerdown", (e) => e.stopPropagation());
@@ -1172,7 +1177,7 @@ app.registerExtension({
                     }
                     textWidget.value = serializeItems(items);
                     renderList(listContainer, textWidget, node);
-                });
+                }, "#fca5a5");
                 deleteBtn.title = "Delete all checked entries from the list";
 
                 const copyBtn = createButton("Copy", () => {
