@@ -1034,6 +1034,11 @@ app.registerExtension({
                     const sourceItem = items[idxA] || { checked: false, text: "" };
                     const clonedItem = { checked: sourceItem.checked, text: sourceItem.text };
 
+                    const isSingle = node.properties?.selection_mode === "single";
+                    if (isSingle && sourceItem.checked) {
+                        sourceItem.checked = false;
+                    }
+
                     while (items.length < idxB) {
                         items.push({ checked: false, text: "" });
                     }
