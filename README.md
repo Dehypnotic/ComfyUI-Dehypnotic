@@ -1,4 +1,4 @@
-Get lifetime pro sucbscription on my Media Manager now. Will appreciate feedback about bugs, requests and more:
+Get lifetime pro-sucbscription on my Media Manager now. Will appreciate feedback about bugs, requests and more:
 https://apps.microsoft.com/detail/9P7TNT2XJ3K6?hl=neutral&gl=NO&ocid=pdpshare
 
 <table cellspacing="0" cellpadding="0" style="width:100%">
