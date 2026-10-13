@@ -1,4 +1,4 @@
-#### Important: This is my only repository now, so delete any old folders (comfyui-aspect-ratio-advanced, comfyui-numbered-text, comfyui-range-to-string, or comfyui-dehypnotic-save-nodes) you may have in ComfyUI\custom_nodes to avoid conflicts. 
+Lifetime pro sucbscription on my Media Manager now: https://apps.microsoft.com/detail/9P7TNT2XJ3K6?hl=neutral&gl=NO&ocid=pdpshare
 
 # ComfyUI-Dehypnotic Custom Nodes
 
