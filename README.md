@@ -1,4 +1,4 @@
-Free lifetime pro-sucbscription on my Media Manager now. Will appreciate feedback. https://apps.microsoft.com/detail/9P7TNT2XJ3K6?hl=neutral&gl=NO&ocid=pdpshare
+Free lifetime pro-sucbscription on my Media Manager now. Will appreciate feedback. https://apps.microsoft.com/detail/9P7TNT2XJ3K6
 
 <table cellspacing="0" cellpadding="0" style="width:100%">
   <tr>
