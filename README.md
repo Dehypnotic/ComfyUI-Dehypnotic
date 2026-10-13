@@ -1,8 +1,13 @@
 Lifetime pro sucbscription on my Media Manager now: https://apps.microsoft.com/detail/9P7TNT2XJ3K6?hl=neutral&gl=NO&ocid=pdpshare
 
-<img width="1752" height="923" alt="download (1)" src="https://github.com/user-attachments/assets/b452f889-b547-4482-8bdf-d23f00002a91" />
-<img width="1746" height="924" alt="download" src="https://github.com/user-attachments/assets/31b39698-efae-4aa1-9ada-dbcc584be38d" />
+<table cellspacing="0" cellpadding="0" style="width:100%">
+  <tr>
+    <th><img width="1752" height="923" alt="download (1)" src="https://github.com/user-attachments/assets/b452f889-b547-4482-8bdf-d23f00002a91" /></th>
+    <th><img width="1746" height="924" alt="download" src="https://github.com/user-attachments/assets/31b39698-efae-4aa1-9ada-dbcc584be38d" /></th>
+    <th><img width="1750" height="923" alt="download (2)" src="https://github.com/user-attachments/assets/6ffff638-faa7-4c40-9c67-5c4c53b854ed" /></th>
 
+  </tr>
+</table>
 
 # ComfyUI-Dehypnotic Custom Nodes
 
