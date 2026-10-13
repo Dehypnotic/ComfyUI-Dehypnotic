@@ -1,5 +1,9 @@
 Lifetime pro sucbscription on my Media Manager now: https://apps.microsoft.com/detail/9P7TNT2XJ3K6?hl=neutral&gl=NO&ocid=pdpshare
 
+<img width="1752" height="923" alt="download (1)" src="https://github.com/user-attachments/assets/b452f889-b547-4482-8bdf-d23f00002a91" />
+<img width="1746" height="924" alt="download" src="https://github.com/user-attachments/assets/31b39698-efae-4aa1-9ada-dbcc584be38d" />
+
+
 # ComfyUI-Dehypnotic Custom Nodes
 
 A suite of feature-rich, high-performance custom nodes for [ComfyUI](https://github.com/comfyanonymous/ComfyUI). This repository provides nodes for image, video, audio saving, dynamic aspect ratio calculation, wireless data rerouting, and text generation.
