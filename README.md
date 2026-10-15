@@ -9,6 +9,8 @@ Free lifetime pro-sucbscription on my Media Manager now! Will appreciate feedbac
   </tr>
 </table>
 
+---
+
 # ComfyUI-Dehypnotic Custom Nodes
 
 A suite of feature-rich, high-performance custom nodes for [ComfyUI](https://github.com/comfyanonymous/ComfyUI). This repository provides nodes for image, video, audio saving, dynamic aspect ratio calculation, wireless data rerouting, and text generation.
